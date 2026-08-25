@@ -1,0 +1,39 @@
+EVALUADOR FORMATIVO — 5.° "E"
+I.E. N.° 82019 "La Florida del Inca" — Cajamarca
+Prof. Walter Rodrigo Arribasplata Chavarry
+
+CÓMO USARLO
+1. Copia la carpeta "EvaluadorFormativo" completa a tu celular o laptop
+   (por Bluetooth, cable USB, o subiéndola a Drive y descargándola).
+2. Abre el archivo "index.html" con el navegador (Chrome).
+3. Todo funciona sin internet, salvo:
+   - Importar preguntas desde PDF (usa una librería que se descarga
+     la primera vez que la usas).
+   - Descargar el informe en PDF (usa otra librería externa).
+   Si no tienes internet, sigue funcionando igual para tomar la
+   evaluación completa; solo esas dos funciones puntuales requieren
+   conexión la primera vez que se usan en ese dispositivo.
+4. Todo lo que guardes (asistencia, bancos de preguntas, evaluaciones)
+   se queda en ese navegador/dispositivo. Usa "💾 Copia de seguridad"
+   dentro de la app para no perder nada si cambias de celular.
+
+NOVEDADES DE ESTA VERSIÓN
+- Se renombró de "Evaluador Relámpago" a "Evaluador Formativo", ya
+  que ahora evalúa a los 28 estudiantes en una sesión completa (no
+  es una prueba corta/rápida a un grupo pequeño).
+- Evalúa a los 28 estudiantes en orden de lista (N.° 1 al 28),
+  llamándolos uno por uno.
+- Cada evaluación usa exactamente 6 preguntas: 5 preguntas base
+  (100%) + 1 pregunta adicional que solo aparece si el estudiante
+  acierta las 5 base, y que define el nivel AD.
+- Escala: menor a 50% = C · 50%-75% = B · 75%-100% = A ·
+  100% + acierta la adicional = AD.
+- Las preguntas se muestran al estudiante EXACTAMENTE en el orden
+  en que las escribiste (o en el orden del PDF importado), y cada
+  opción aparece marcada con su letra (a, b, c, d) tanto al editar
+  como al calificar, para evitar marcar la respuesta equivocada.
+- Si se guarda una evaluación por error, en la pestaña "Registro"
+  puedes "🔄 Volver a tomarla" (recarga las mismas preguntas) o
+  "🗑️ Eliminarla" del historial.
+- Si cierras la app a mitad de evaluar a los 28, al volver a abrirla
+  te ofrece reanudar exactamente donde te quedaste.
