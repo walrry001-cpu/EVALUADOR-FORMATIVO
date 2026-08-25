@@ -3,19 +3,18 @@
 **I.E. N.° 82019 "La Florida del Inca"** — Cajamarca, Perú
 Prof. Walter Rodrigo Arribasplata Chavarry
 
-Herramienta web (offline-first) para tomar evaluaciones formativas de "preguntas relámpago" a los 28 estudiantes de la sección, con niveles de logro **C · B · A · AD** y conclusión descriptiva basada en los estándares de aprendizaje del **CNEB** (Currículo Nacional de la Educación Básica).
+Herramienta web (offline-first) para tomar evaluaciones formativas de "preguntas relámpago" a los estudiantes de la sección, con niveles de logro **C · B · A · AD** y conclusión descriptiva basada en los estándares de aprendizaje del **CNEB** (Currículo Nacional de la Educación Básica).
 
-🔗 **Usar en línea:** _(se completa automáticamente al activar GitHub Pages — ver abajo)_
-`https://TU-USUARIO.github.io/NOMBRE-DEL-REPO/`
+🔗 **Usar en línea:** `https://walrry001-cpu.github.io/EVALUADOR-FORMATIVO/`
 
 ---
 
 ## ✨ Características
 
-- Evalúa a los 28 estudiantes en orden de lista, uno por uno.
+- Evalúa a los estudiantes en orden de lista, uno por uno.
 - Cada evaluación usa 6 preguntas: 5 base (100%) + 1 adicional que solo aparece si el estudiante acierta las 5 base y define el nivel **AD**.
 - Escala: `< 50% = C` · `50%–75% = B` · `75%–100% = A` · `100% + acierta la adicional = AD`.
-- Las preguntas se muestran en el orden exacto en que se escribieron o se importaron desde PDF, con cada opción marcada (a, b, c, d).
+- Importa preguntas desde PDF reconociendo distintos formatos de numeración ("1.", "1)", "Pregunta 1", "N° 1", "Ítem 1"), distintos formatos de opciones (con o sin casillero, mayúscula o minúscula) y distintas formas de indicar la respuesta correcta (Rpta:, Respuesta:, Clave:, casillero marcado, o una clave de respuestas al final del documento). Si no puede determinar con certeza la respuesta correcta de una pregunta, la descarta en vez de adivinar.
 - Registro de evaluaciones con opción de **volver a tomar** o **eliminar** una evaluación guardada por error.
 - Si se cierra la app a mitad de una sesión, al reabrir se ofrece **reanudar** donde quedó.
 - Funciona completamente **sin internet**, salvo dos funciones puntuales que descargan una librería externa la primera vez que se usan en el dispositivo:
