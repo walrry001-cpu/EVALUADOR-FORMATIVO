@@ -405,6 +405,19 @@
     </div>
 
     <div class="card">
+      <button type="button" class="btn outline small" id="toggleGestionEstudiantes">⚙ Gestionar estudiantes (matrícula / retiro)</button>
+      <div id="gestionEstudiantesBox" style="display:none; margin-top:12px;">
+        <p class="hint">Un estudiante recién matriculado se agrega aquí y se ubica solo, en orden alfabético, en toda la app. Un estudiante retirado se elimina aquí junto con toda su información guardada (cola de pendientes e historial de evaluaciones).</p>
+        <div style="display:flex; gap:8px; margin:10px 0;">
+          <input type="text" id="inputNuevoEstudiante" placeholder="Nombre completo del estudiante nuevo" style="flex:1;">
+          <button type="button" class="btn" id="btnAgregarEstudiante">➕ Agregar</button>
+        </div>
+        <div id="gestionEstudiantesStatus" style="font-size:12.5px; margin-bottom:8px;"></div>
+        <div id="listaGestionEstudiantes" class="roster-list"></div>
+      </div>
+    </div>
+
+    <div class="card">
       <h2>2 · Datos de la sesión</h2>
       <p class="hint">Esto se usa para buscar el estándar oficial y generar preguntas coherentes con tu clase.</p>
       <div class="row2">
@@ -424,7 +437,7 @@
         </div>
         <div>
           <label>Grado / Ciclo</label>
-          <input type="text" id="grado" value="5.° grado de primaria (VI ciclo)">
+          <input type="text" id="grado" value="5.° grado de primaria (V ciclo)">
         </div>
       </div>
       <label>Competencia trabajada</label>
@@ -441,10 +454,7 @@
 
       <label>⚡ Micropráctica diaria de refuerzo (neuroaprendizaje — 5 a 10 min, todos los días de la semana)</label>
       <p class="hint" style="margin-top:-4px;">El cerebro retiene más por constancia que por intensidad. Escribe un reto corto de recuperación activa ligado al tema de hoy; se repite a diario (no como tarea extensa) hasta la próxima sesión.</p>
-      <div class="field-with-btn">
-        <textarea id="micropractica" rows="2" placeholder='Ej: 2 divisiones exactas sencillas por día en la libreta, revisadas al inicio de cada clase.' style="flex:1;resize:vertical;"></textarea>
-        <button class="btn outline small" id="btnSugerirMicro" type="button" style="white-space:nowrap;">💡 Sugerir</button>
-      </div>
+      <textarea id="micropractica" rows="2" placeholder='Ej: 2 divisiones exactas sencillas por día en la libreta, revisadas al inicio de cada clase.' style="width:100%;resize:vertical;"></textarea>
 
       <label>Umbrales de calificación (% de aciertos en las 5 preguntas base)</label>
       <div class="rubric-grid" id="rubricThresholds">
@@ -470,12 +480,6 @@
     <div class="card" id="bancoCard" style="display:none;">
       <h2>Preguntas de la evaluación formativa</h2>
       <p class="hint">Estas preguntas las escribes tú una sola vez por tema; quedan guardadas en este dispositivo y se reutilizan automáticamente la próxima vez que trabajes el mismo tema. Se muestran al estudiante <b>exactamente en el orden en que las escribes aquí</b> (Pregunta 1, 2, 3, 4, 5 y la adicional), y cada opción aparece siempre marcada con su letra (a, b, c, d) para que no marques la respuesta equivocada al calificar.</p>
-
-      <div style="margin:10px 0;">
-        <label>📷 Foto de referencia del tema (opcional, solo para tu apoyo visual al redactar — no se analiza ni se envía a ningún servicio)</label>
-        <input type="file" id="fotoTema" accept="image/*">
-        <div id="fotoTemaPreview" style="margin-top:8px;"></div>
-      </div>
 
       <div style="margin:10px 0;padding:12px;border:1px dashed var(--line);border-radius:10px;">
         <label>📄 Importar preguntas desde PDF (exactamente 6 — 5 base + 1 adicional al final — pregunta numerada, 4 opciones a) b) c) d), e idealmente una línea "Rpta: b")</label>
@@ -574,18 +578,107 @@
 /* ============================================================
    ROSTER — 5° "E"
 ============================================================ */
-const ROSTER = [
+// IMPORTANTE: cada estudiante tiene un id FIJO de por vida (S1, S2...),
+// asignado una sola vez aquí abajo. Este id NUNCA se recalcula por
+// posición en la lista, para que agregar o quitar estudiantes en medio
+// de la lista no cambie el id de nadie más (eso rompería el historial
+// de evaluaciones ya guardadas). El número de lista visible (num) sí se
+// recalcula siempre en orden alfabético — ver renumerarRoster().
+const ROSTER_BASE = [
 "Abner William Arias Quiroz","Viktor Valerio Bazán Durán","Dayana Melany Cadenillas Cachi",
 "Cinthya Liseth Calle Acuña","Helen Alisson Camacho Sánchez","Adriana Lucía Cerquín Cotrina",
 "Angie Jharren Chávez Rubio","Deysi Natali Cortez Huaccha","Yordan Andree Cusquisibán Chuquilín",
 "Erika Thamara Fernández Moreno","Franco Snayder Herrera Utani","Deysi Yhakelin Huingo Cueva",
 "Ian Larios Villar","Esmeralda Yamileth López Barboza","Jimena Saray López Cercado",
-"Ruth Jhamely López Rafael","Mikel Andre Marín Marín","Caleb Moisés Medina Huamán","Logahn Jahilim Mendoza Mendoza",
-"Illari Alejandra Orihuela Muñoz","Raj Nicolás Portal Linares","Edwin Rodrigo Quito Lulayco",
-"Mathias Jamir Silva Calua","María de los Ángeles Sulca Quispe","Keyla Judith Terrones Infante",
-"Dayvson Zuriel Vásquez Aguilar","Dominick Fabrizio Vásquez Portal","Antoni Neymar Velásquez Bueno",
-"Thamara Sarai Villanueva Jara"
-].map((name,i)=>({id:'S'+(i+1), num:i+1, name}));
+"Ruth Jhamely López Rafael","Mikel Andre Marín Marín","Caleb Moisés Medina Huamán",
+"Logahn Jahilim Mendoza Mendoza","Illari Alejandra Orihuela Muñoz","Raj Nicolás Portal Linares",
+"Edwin Rodrigo Quito Lulayco","Mathias Jamir Silva Calua","María de los Ángeles Sulca Quispe",
+"Keyla Judith Terrones Infante","Dayvson Zuriel Vásquez Aguilar","Dominick Fabrizio Vásquez Portal",
+"Antoni Neymar Velásquez Bueno","Thamara Sarai Villanueva Jara"
+].map((name,i)=>({id:'S'+(i+1), name}));
+
+let ROSTER = ROSTER_BASE.slice();
+let rosterOverrides = { agregados: [], eliminadosIds: [] };
+
+// Convención peruana: se asume que las dos últimas palabras del nombre
+// completo son los apellidos, y se ordena alfabéticamente por ahí (igual
+// a como ya estaba ordenada manualmente la lista original).
+function apellidosParaOrden(nombreCompleto){
+  const palabras = nombreCompleto.trim().split(/\s+/);
+  if(palabras.length <= 2) return nombreCompleto.toLowerCase();
+  return palabras.slice(-2).join(' ').toLowerCase();
+}
+function compararEstudiantes(a, b){
+  return apellidosParaOrden(a.name).localeCompare(apellidosParaOrden(b.name), 'es')
+      || a.name.localeCompare(b.name, 'es');
+}
+// Recalcula el número de lista (num) de TODOS los estudiantes según el
+// orden alfabético actual. El id de cada uno nunca se toca aquí.
+function renumerarRoster(){
+  ROSTER.slice().sort(compararEstudiantes).forEach((s,i)=>{ s.num = i+1; });
+}
+function aplicarRosterOverrides(){
+  const base = ROSTER_BASE.filter(s => !rosterOverrides.eliminadosIds.includes(s.id));
+  ROSTER = base.concat(rosterOverrides.agregados);
+  ROSTER.forEach(s => { if(!(s.id in state.attendance)) state.attendance[s.id] = true; });
+  renumerarRoster();
+}
+async function loadRosterOverrides(){
+  try{
+    const r = await storage.get('roster_overrides');
+    rosterOverrides = JSON.parse(r.value);
+    if(!Array.isArray(rosterOverrides.agregados)) rosterOverrides.agregados = [];
+    if(!Array.isArray(rosterOverrides.eliminadosIds)) rosterOverrides.eliminadosIds = [];
+  }catch(e){ rosterOverrides = { agregados: [], eliminadosIds: [] }; }
+  aplicarRosterOverrides();
+}
+async function saveRosterOverrides(){
+  try{ await storage.set('roster_overrides', JSON.stringify(rosterOverrides)); }catch(e){}
+}
+
+// Agrega un estudiante nuevo (recién matriculado). Se ubica solo en el
+// lugar alfabético que le corresponde y queda guardado para la próxima
+// vez que se abra la app.
+async function agregarEstudianteNuevo(nombreCompletoCrudo){
+  const nombre = nombreCompletoCrudo.trim().replace(/\s+/g,' ');
+  if(!nombre) return { ok:false, msg:'Escribe el nombre completo del estudiante.' };
+  if(ROSTER.some(s=>s.name.toLowerCase()===nombre.toLowerCase())){
+    return { ok:false, msg:'Ya existe un estudiante con ese nombre en la lista.' };
+  }
+  const nuevo = { id: 'S'+Date.now(), name: nombre };
+  rosterOverrides.agregados.push(nuevo);
+  await saveRosterOverrides();
+  aplicarRosterOverrides();
+  return { ok:true, estudiante: nuevo };
+}
+
+// Retira a un estudiante (por ejemplo, se dio de baja) y elimina TODO lo
+// que le pertenece: su lugar en la lista, su cola de pendientes y todo su
+// historial de evaluaciones ya guardadas.
+async function eliminarEstudianteYArchivos(id){
+  const est = ROSTER.find(s=>s.id===id);
+  if(!est) return { ok:false };
+
+  if(!rosterOverrides.eliminadosIds.includes(id)) rosterOverrides.eliminadosIds.push(id);
+  rosterOverrides.agregados = rosterOverrides.agregados.filter(s=>s.id!==id);
+  await saveRosterOverrides();
+
+  state.pending = state.pending.filter(x=>x!==id);
+  await savePending();
+  state.lastSessionEvaluated = (state.lastSessionEvaluated||[]).filter(x=>x!==id);
+  await saveLastEvaluated();
+  delete state.attendance[id];
+
+  state.sessions.forEach(ses=>{
+    ses.evaluados = (ses.evaluados||[]).filter(ev=>ev.studentId!==id);
+    if(Array.isArray(ses.seleccionados)) ses.seleccionados = ses.seleccionados.filter(x=>x!==id);
+  });
+  state.sessions = state.sessions.filter(ses=>(ses.evaluados||[]).length>0);
+  await saveSessions();
+
+  aplicarRosterOverrides();
+  return { ok:true, nombre: est.name };
+}
 
 /* ============================================================
    STORAGE — funciona 100% offline, guardado directo en el
@@ -696,10 +789,14 @@ document.getElementById('tabs').addEventListener('click', (e)=>{
 /* ============================================================
    ROSTER RENDER (attendance)
 ============================================================ */
+function rosterOrdenado(){
+  return ROSTER.slice().sort(compararEstudiantes);
+}
+
 function renderRoster(){
   const list = document.getElementById('rosterList');
   list.innerHTML = '';
-  ROSTER.forEach(s=>{
+  rosterOrdenado().forEach(s=>{
     const present = state.attendance[s.id];
     const isPending = state.pending.includes(s.id);
     const row = document.createElement('div');
@@ -730,6 +827,58 @@ function updateAttendanceSummary(){
   document.getElementById('absentCount').textContent = ROSTER.length - present;
   document.getElementById('pendingCount').textContent = state.pending.length;
 }
+
+/* ============================================================
+   GESTIÓN DE ESTUDIANTES — agregar (matrícula) / eliminar (retiro)
+============================================================ */
+function renderGestionEstudiantes(){
+  const box = document.getElementById('listaGestionEstudiantes');
+  box.innerHTML = rosterOrdenado().map(s=>`
+    <div class="roster-row">
+      <span class="num">${String(s.num).padStart(2,'0')}</span>
+      <span class="name">${s.name}</span>
+      <button type="button" class="btn outline small" data-eliminar-est="${s.id}" style="color:var(--danger,#b3261e);border-color:var(--danger,#b3261e);">🗑️ Retirar</button>
+    </div>
+  `).join('');
+  box.querySelectorAll('[data-eliminar-est]').forEach(btn=>{
+    btn.addEventListener('click', async ()=>{
+      const id = btn.dataset.eliminarEst;
+      const est = ROSTER.find(s=>s.id===id);
+      if(!est) return;
+      if(!confirm(`¿Retirar a "${est.name}" de la sección? Esto también eliminará permanentemente su cola de pendientes y TODO su historial de evaluaciones ya guardadas. Esta acción no se puede deshacer.`)) return;
+      const r = await eliminarEstudianteYArchivos(id);
+      if(r.ok){
+        renderRoster();
+        renderGestionEstudiantes();
+        renderPending();
+        renderRegistro();
+        const st = document.getElementById('gestionEstudiantesStatus');
+        st.innerHTML = `<span style="color:var(--good,#2e7d32);">✔ Se retiró a ${r.nombre} y se eliminó todo su historial guardado.</span>`;
+      }
+    });
+  });
+}
+
+document.getElementById('toggleGestionEstudiantes').addEventListener('click', ()=>{
+  const box = document.getElementById('gestionEstudiantesBox');
+  const abierto = box.style.display !== 'none';
+  box.style.display = abierto ? 'none' : 'block';
+  if(!abierto) renderGestionEstudiantes();
+});
+
+document.getElementById('btnAgregarEstudiante').addEventListener('click', async ()=>{
+  const input = document.getElementById('inputNuevoEstudiante');
+  const st = document.getElementById('gestionEstudiantesStatus');
+  const r = await agregarEstudianteNuevo(input.value);
+  if(!r.ok){
+    st.innerHTML = `<span style="color:var(--danger,#b3261e);">${r.msg}</span>`;
+    return;
+  }
+  input.value = '';
+  st.innerHTML = `<span style="color:var(--good,#2e7d32);">✔ Se agregó a ${r.estudiante.name} en el N.° ${String(r.estudiante.num).padStart(2,'0')} de la lista.</span>`;
+  renderRoster();
+  renderGestionEstudiantes();
+});
 
 /* ============================================================
    COMPETENCIAS OFICIALES (CNEB - Currículo Nacional Perú)
@@ -845,116 +994,116 @@ async function checkAndResetAttendanceForNewDay(){
 ============================================================ */
 const MINEDU_ESTANDARES = {
 "Resuelve problemas de cantidad": {
-  estandar:"Traduce datos y relaciones de una situación a expresiones numéricas con las cuatro operaciones, fracciones, decimales, potencias y porcentajes; comprueba si su expresión representa las condiciones del problema y explica el valor posicional hasta millones.",
-  fuente:"CNEB - Programa Curricular de Educación Primaria, MINEDU 2016, VI ciclo",
+  estandar:"Resuelve problemas referidos a una o más acciones de comparar, igualar, repetir o repartir cantidades, partir y repartir una cantidad en partes iguales; las traduce a expresiones aditivas, multiplicativas y la potenciación cuadrada y cúbica; así como a expresiones de adición, sustracción y multiplicación con fracciones y decimales (hasta el centésimo). Expresa su comprensión del sistema de numeración decimal con números naturales hasta seis cifras, de divisores y múltiplos, y del valor posicional de los números decimales hasta los centésimos; con lenguaje numérico y representaciones diversas. Representa de diversas formas su comprensión de la noción de fracción como operador y como cociente, así como las equivalencias entre decimales, fracciones o porcentajes usuales. Selecciona y emplea estrategias diversas, el cálculo mental o escrito para operar con números naturales, fracciones, decimales y porcentajes de manera exacta o aproximada; así como para hacer conversiones de unidades de medida de masa, tiempo y temperatura, y medir de manera exacta o aproximada usando la unidad pertinente. Justifica sus procesos de resolución así como sus afirmaciones sobre las relaciones entre las cuatro operaciones y sus propiedades, basándose en ejemplos y sus conocimientos matemáticos.",
+  fuente:"CNEB - Programa Curricular de Educación Primaria, MINEDU 2016, V ciclo",
   capacidades:["Traduce cantidades a expresiones numéricas","Comunica su comprensión sobre los números y las operaciones","Usa estrategias y procedimientos de estimación y cálculo","Argumenta afirmaciones sobre las relaciones numéricas y las operaciones"],
   rubrica:{C:"Necesita apoyo constante para relacionar los datos de un problema con una operación adecuada.",B:"Traduce problemas sencillos a operaciones básicas, con errores al usar fracciones, decimales o porcentajes.",A:"Traduce con autonomía situaciones cotidianas a expresiones numéricas con las cuatro operaciones, fracciones, decimales y porcentajes, y verifica sus resultados.",AD:"Además de resolver con autonomía, propone distintas formas de representar y comprobar resultados, argumentando con seguridad."}
 },
 "Resuelve problemas de regularidad, equivalencia y cambio": {
-  estandar:"Establece relaciones entre datos, valores desconocidos y equivalencias, generaliza cómo continúa una regla de formación numérica o geométrica, y expresa su comprensión mediante lenguaje algebraico, ecuaciones y gráficos.",
-  fuente:"CNEB - Programa Curricular de Educación Primaria, MINEDU 2016, VI ciclo",
+  estandar:"Resuelve problemas de equivalencias, regularidades o relaciones de cambio entre dos magnitudes o entre expresiones; traduciéndolas a ecuaciones que combinan las cuatro operaciones, a expresiones de desigualdad o a relaciones de proporcionalidad directa, y patrones de repetición que combinan criterios geométricos y cuya regla de formación se asocia a la posición de sus elementos. Expresa su comprensión del término general de un patrón, las condiciones de desigualdad expresadas con los signos > y <, así como de la relación proporcional como un cambio constante; usando lenguaje matemático y diversas representaciones. Emplea recursos, estrategias y propiedades de las igualdades para resolver ecuaciones o hallar valores que cumplen una condición de desigualdad o proporcionalidad; así como procedimientos para crear, continuar o completar patrones. Realiza afirmaciones a partir de sus experiencias concretas, sobre patrones y sus elementos no inmediatos; las justifica con ejemplos, procedimientos, y propiedades de la igualdad y desigualdad.",
+  fuente:"CNEB - Programa Curricular de Educación Primaria, MINEDU 2016, V ciclo",
   capacidades:["Traduce datos y condiciones a expresiones algebraicas","Comunica su comprensión sobre las relaciones algebraicas","Usa estrategias y procedimientos para encontrar reglas generales","Argumenta afirmaciones sobre relaciones de cambio y equivalencia"],
   rubrica:{C:"Identifica patrones simples solo con ejemplos concretos y ayuda del docente.",B:"Reconoce y continúa patrones numéricos sencillos, con dificultad para generalizar con lenguaje algebraico.",A:"Identifica y generaliza patrones numéricos y geométricos, expresándolos mediante ecuaciones o gráficos con autonomía.",AD:"Generaliza patrones complejos, los representa de varias formas y argumenta la equivalencia entre expresiones algebraicas."}
 },
 "Resuelve problemas de forma, movimiento y localización": {
-  estandar:"Describe las características y atributos medibles de objetos, los relaciona con formas bidimensionales y tridimensionales, resuelve problemas de perímetro, área y volumen, y describe la ubicación de objetos usando coordenadas, planos o mapas a escala.",
-  fuente:"CNEB - Programa Curricular de Educación Primaria, MINEDU 2016, VI ciclo",
+  estandar:"Resuelve problemas en los que modela las características y la ubicación de objetos a formas bidimensionales y tridimensionales, sus propiedades, su ampliación, reducción o rotación. Describe y clasifica prismas rectos, cuadriláteros, triángulos, círculos, por sus elementos: vértices, lados, caras, ángulos, y por sus propiedades; usando lenguaje geométrico. Realiza giros en cuartos y medias vueltas, traslaciones, ampliación y reducción de formas bidimensionales, en el plano cartesiano. Describe recorridos y ubicaciones en planos. Emplea procedimientos e instrumentos para ampliar, reducir, girar y construir formas; así como para estimar o medir la longitud, superficie y capacidad de los objetos, seleccionando la unidad de medida convencional apropiada y realizando conversiones. Explica sus afirmaciones sobre relaciones entre elementos de las formas geométricas y sus atributos medibles, con ejemplos concretos y propiedades.",
+  fuente:"CNEB - Programa Curricular de Educación Primaria, MINEDU 2016, V ciclo",
   capacidades:["Modela objetos con formas geométricas y sus transformaciones","Comunica su comprensión sobre las formas y relaciones geométricas","Usa estrategias y procedimientos para medir y orientarse en el espacio","Argumenta afirmaciones sobre relaciones geométricas"],
   rubrica:{C:"Reconoce formas geométricas básicas pero requiere apoyo para calcular perímetro o área.",B:"Calcula perímetro y área de figuras simples y ubica objetos en un plano con ayuda ocasional.",A:"Resuelve con autonomía problemas de perímetro, área y volumen de figuras compuestas, y ubica objetos con coordenadas.",AD:"Resuelve problemas geométricos complejos, argumenta relaciones de semejanza y usa coordenadas y escalas con precisión."}
 },
 "Resuelve problemas de gestión de datos e incertidumbre": {
-  estandar:"Recopila y organiza datos de una población en estudio, los representa mediante tablas y gráficos con medidas de tendencia central, y determina la probabilidad de sucesos en situaciones aleatorias sencillas.",
-  fuente:"CNEB - Programa Curricular de Educación Primaria, MINEDU 2016, VI ciclo",
+  estandar:"Resuelve problemas relacionados con temas de estudio, en los que reconoce variables cualitativas o cuantitativas discretas, recolecta datos a través de encuestas y de diversas fuentes de información. Selecciona tablas de doble entrada, gráficos de barras dobles y gráficos de líneas, seleccionando el más adecuado para representar los datos. Usa el significado de la moda para interpretar información contenida en gráficos y en diversas fuentes de información. Realiza experimentos aleatorios, reconoce sus posibles resultados y expresa la probabilidad de un evento relacionando el número de casos favorables y el total de casos posibles. Elabora y justifica predicciones, decisiones y conclusiones, basándose en la información obtenida en el análisis de datos o en la probabilidad de un evento.",
+  fuente:"CNEB - Programa Curricular de Educación Primaria, MINEDU 2016, V ciclo",
   capacidades:["Representa datos con gráficos y medidas estadísticas","Comunica su comprensión de conceptos estadísticos y probabilísticos","Usa estrategias y procedimientos para recopilar y procesar datos","Sustenta conclusiones basadas en la información obtenida"],
   rubrica:{C:"Organiza datos simples en tablas solo con apoyo directo del docente.",B:"Recolecta y representa datos en gráficos de barras sencillos, con dificultad al calcular media o moda.",A:"Organiza, representa e interpreta datos en distintos gráficos y calcula medidas de tendencia central con autonomía.",AD:"Interpreta y compara conjuntos de datos, calcula probabilidades y argumenta conclusiones basadas en la información."}
 },
 "Se comunica oralmente en su lengua materna": {
-  estandar:"Expresa sus ideas organizando el contenido según su propósito, adecúa su texto oral al oyente y contexto, usa vocabulario variado y recursos no verbales, y evalúa lo dicho por él y por otros.",
-  fuente:"CNEB - Programa Curricular de Educación Primaria, MINEDU 2016, VI ciclo",
+  estandar:"Se comunica oralmente mediante diversos tipos de textos; infiere el tema, propósito, hechos y conclusiones a partir de información explícita, e interpreta la intención del interlocutor en discursos que contienen ironías. Se expresa adecuándose a situaciones comunicativas formales e informales. Organiza y desarrolla sus ideas en torno a un tema y las relaciona mediante el uso de conectores y algunos referentes, así como de un vocabulario variado y pertinente. Usa recursos no verbales y paraverbales para enfatizar lo que dice. Reflexiona y evalúa los textos escuchados a partir de sus conocimientos y el contexto sociocultural. En un intercambio, hace preguntas y contribuciones relevantes que responden a las ideas y puntos de vista de otros, enriqueciendo el tema tratado.",
+  fuente:"CNEB - Programa Curricular de Educación Primaria, MINEDU 2016, V ciclo",
   capacidades:["Obtiene información de textos orales","Infiere e interpreta información del texto oral","Adecúa, organiza y desarrolla el texto oral","Utiliza recursos no verbales y paraverbales","Interactúa estratégicamente con distintos interlocutores","Reflexiona y evalúa la forma, contenido y contexto del texto oral"],
   rubrica:{C:"Se expresa con ideas sueltas y poco organizadas, requiere apoyo para mantener el tema.",B:"Organiza sus ideas en torno a un tema, con vocabulario limitado y pocos recursos de apoyo.",A:"Se expresa con claridad y coherencia, adecúa su lenguaje al oyente y usa recursos no verbales pertinentes.",AD:"Se expresa con fluidez y argumentos sólidos, adapta su discurso a diferentes situaciones y evalúa críticamente su comunicación."}
 },
 "Lee diversos tipos de textos escritos en su lengua materna": {
-  estandar:"Obtiene información explícita e infiere el significado de textos de estructura compleja, integra información para construir el sentido global, y opina sobre el contenido y los recursos textuales.",
-  fuente:"CNEB - Programa Curricular de Educación Primaria, MINEDU 2016, VI ciclo",
+  estandar:"Lee diversos tipos de textos con varios elementos complejos en su estructura y con vocabulario variado. Obtiene información e integra datos que están en distintas partes del texto. Realiza inferencias locales a partir de información explícita e implícita. Interpreta el texto considerando información relevante y complementaria para construir su sentido global. Reflexiona sobre aspectos variados del texto a partir de su conocimiento y experiencia. Evalúa el uso del lenguaje, la intención de los recursos textuales y el efecto del texto en el lector a partir de su conocimiento y del contexto sociocultural.",
+  fuente:"CNEB - Programa Curricular de Educación Primaria, MINEDU 2016, V ciclo",
   capacidades:["Obtiene información del texto escrito","Infiere e interpreta información del texto","Reflexiona y evalúa la forma, el contenido y contexto del texto"],
   rubrica:{C:"Identifica información explícita sencilla, con dificultad para inferir ideas no dichas directamente.",B:"Comprende información explícita y realiza inferencias simples en textos de estructura básica.",A:"Infiere el significado de textos de estructura compleja y opina sobre su contenido con argumentos.",AD:"Interpreta textos complejos con distintos propósitos, evalúa críticamente su contenido y forma, y contrasta fuentes."}
 },
 "Escribe diversos tipos de textos en su lengua materna": {
-  estandar:"Adecúa su texto al destinatario, propósito y registro, organiza y desarrolla ideas en torno a un tema evitando digresiones, usa conectores y recursos gramaticales apropiados, y revisa su texto para mejorarlo.",
-  fuente:"CNEB - Programa Curricular de Educación Primaria, MINEDU 2016, VI ciclo",
+  estandar:"Escribe diversos tipos de textos de forma reflexiva. Adecúa su texto al destinatario, propósito y el registro, a partir de su experiencia previa y de algunas fuentes de información complementarias. Organiza y desarrolla lógicamente las ideas en torno a un tema y las estructura en párrafos. Establece relaciones entre ideas a través del uso adecuado de algunos tipos de conectores y de referentes; emplea vocabulario variado. Utiliza recursos ortográficos para separar expresiones, ideas y párrafos con la intención de darle claridad y sentido a su texto. Reflexiona y evalúa de manera permanente la coherencia y cohesión de las ideas en el texto que escribe, así como el uso del lenguaje para argumentar o reforzar sentidos y producir efectos en el lector según la situación comunicativa.",
+  fuente:"CNEB - Programa Curricular de Educación Primaria, MINEDU 2016, V ciclo",
   capacidades:["Adecúa el texto a la situación comunicativa","Organiza y desarrolla las ideas de forma coherente y cohesionada","Utiliza convenciones del lenguaje escrito","Reflexiona y evalúa la forma, contenido y contexto del texto escrito"],
   rubrica:{C:"Escribe ideas sueltas, con poca organización y errores frecuentes de ortografía.",B:"Escribe textos breves con una idea central, con conectores limitados y algunos errores.",A:"Escribe textos organizados y coherentes, con vocabulario variado y uso adecuado de conectores y ortografía.",AD:"Escribe textos complejos y bien estructurados, revisa y mejora su propio texto, dominando el lenguaje escrito."}
 },
 "Construye su identidad": {
-  estandar:"Se valora a sí mismo reconociendo sus características, cualidades, limitaciones y cambios propios de su edad, se relaciona con los demás con igualdad, autorregula sus emociones y actúa con autonomía cuidando su bienestar.",
-  fuente:"CNEB - Programa Curricular de Educación Primaria, MINEDU 2016, VI ciclo",
+  estandar:"Construye su identidad al tomar conciencia de los aspectos que lo hacen único, cuando se reconoce a sí mismo a partir de sus características personales, sus capacidades y limitaciones reconociendo el papel de las familias en la formación de dichas características. Aprecia su pertenencia cultural a un país diverso. Explica las causas y consecuencias de sus emociones, y utiliza estrategias para regularlas. Manifiesta su punto de vista frente a situaciones de conflicto moral, en función de cómo estas le afectan a él o a los demás. Examina sus acciones en situaciones de conflicto moral que se presentan en la vida cotidiana y se plantea comportamientos que tomen en cuenta principios éticos. Establece relaciones de igualdad entre hombres y mujeres, y explica su importancia. Crea vínculos afectivos positivos y se sobrepone cuando estos cambian. Identifica conductas para protegerse de situaciones que ponen en riesgo su integridad en relación a su sexualidad.",
+  fuente:"CNEB - Programa Curricular de Educación Primaria, MINEDU 2016, V ciclo",
   capacidades:["Se valora a sí mismo","Autorregula sus emociones","Reflexiona y argumenta éticamente","Vive su sexualidad de manera integral"],
   rubrica:{C:"Reconoce algunas de sus características personales solo con apoyo del docente.",B:"Identifica sus cualidades y cambios propios de su edad, con dificultad para autorregular sus emociones en conflictos.",A:"Se reconoce y valora a sí mismo, se relaciona con igualdad y autorregula sus emociones en la mayoría de situaciones.",AD:"Actúa con autonomía y seguridad, autorregula sus emociones en situaciones difíciles y fortalece su identidad."}
 },
 "Convive y participa democráticamente en la búsqueda del bien común": {
-  estandar:"Se relaciona con los demás respetando las diferencias, cumple con sus responsabilidades, construye y evalúa junto a sus compañeros las normas de convivencia, y participa en acciones orientadas al bien común.",
-  fuente:"CNEB - Programa Curricular de Educación Primaria, MINEDU 2016, VI ciclo",
+  estandar:"Convive y participa democráticamente cuando se relaciona con los demás, respetando las diferencias, los derechos de cada uno, cumpliendo y evaluando sus deberes. Se interesa por relacionarse con personas de culturas distintas y conocer sus costumbres. Construye y evalúa normas de convivencia tomando en cuenta sus derechos. Maneja conflictos utilizando el diálogo y la mediación con base en criterios de igualdad o equidad. Propone, planifica y realiza acciones colectivas orientadas al bien común, la solidaridad, la protección de las personas vulnerables y la defensa de sus derechos. Delibera sobre asuntos de interés público con argumentos basados en fuentes y toma en cuenta la opinión de los demás.",
+  fuente:"CNEB - Programa Curricular de Educación Primaria, MINEDU 2016, V ciclo",
   capacidades:["Interactúa con todas las personas","Construye normas y asume acuerdos y leyes","Maneja conflictos de manera constructiva","Delibera sobre asuntos públicos","Participa en acciones que promueven el bienestar común"],
   rubrica:{C:"Requiere recordatorios frecuentes para respetar normas básicas de convivencia.",B:"Cumple con sus responsabilidades y respeta las diferencias en la mayoría de situaciones.",A:"Convive respetando las diferencias, cumple y evalúa sus responsabilidades, y participa en la construcción de normas.",AD:"Propone y lidera acciones colectivas orientadas al bien común, y delibera sobre asuntos públicos con argumentos."}
 },
 "Construye interpretaciones históricas": {
-  estandar:"Explica procesos históricos del Perú y el mundo a partir de la clasificación de sus causas y consecuencias, distingue entre diferentes fuentes históricas, y usa términos y referentes de tiempo para explicar cambios y permanencias.",
-  fuente:"CNEB - Programa Curricular de Educación Primaria, MINEDU 2016, VI ciclo",
+  estandar:"Construye interpretaciones históricas en las que explica, de manera general, procesos históricos peruanos, empleando algunas categorías temporales. Identifica las causas inmediatas y lejanas que desencadenaron dichos procesos, así como las consecuencias cuyos efectos se ven de inmediato o a largo plazo. Ordena cronológicamente procesos históricos peruanos y describe algunos cambios, permanencias y simultaneidades producidos en ellos. Utiliza información de diversas fuentes a partir de identificar su origen y distinguiendo algunas diferencias entre las versiones que dan sobre los procesos históricos.",
+  fuente:"CNEB - Programa Curricular de Educación Primaria, MINEDU 2016, V ciclo",
   capacidades:["Interpreta críticamente fuentes diversas","Comprende el tiempo histórico","Explica y argumenta procesos históricos"],
   rubrica:{C:"Ubica hechos históricos sencillos en una línea de tiempo con apoyo constante.",B:"Reconoce causas y consecuencias básicas de un proceso histórico, con dificultad para usar fuentes diversas.",A:"Explica procesos históricos identificando causas y consecuencias, y usa distintas fuentes con autonomía.",AD:"Compara e interpreta críticamente diversas fuentes históricas y argumenta relaciones entre cambios y permanencias."}
 },
 "Gestiona responsablemente el espacio y el ambiente": {
-  estandar:"Explica las relaciones entre los elementos naturales y sociales del espacio geográfico, evalúa problemáticas ambientales y territoriales, y participa en acciones de cuidado del ambiente y prevención de riesgos de desastre.",
-  fuente:"CNEB - Programa Curricular de Educación Primaria, MINEDU 2016, VI ciclo",
+  estandar:"Gestiona responsablemente el espacio y ambiente al realizar frecuentemente actividades para su cuidado y al disminuir los factores de vulnerabilidad frente al cambio climático y a los riesgos de desastres en su escuela. Utiliza distintas fuentes y herramientas cartográficas y socioculturales para ubicar elementos en el espacio geográfico y el ambiente, y compara estos espacios a diferentes escalas considerando la acción de los actores sociales. Explica las problemáticas ambientales y territoriales a partir de sus causas, consecuencias y sus manifestaciones a diversas escalas.",
+  fuente:"CNEB - Programa Curricular de Educación Primaria, MINEDU 2016, V ciclo",
   capacidades:["Comprende las relaciones entre los elementos naturales y sociales","Maneja fuentes de información para comprender el espacio geográfico","Genera acciones para conservar el ambiente local y global"],
   rubrica:{C:"Identifica algunos elementos del espacio geográfico cercano con apoyo del docente.",B:"Explica relaciones simples entre elementos naturales y sociales de su localidad.",A:"Explica problemáticas ambientales de su entorno y propone acciones de cuidado del ambiente con autonomía.",AD:"Evalúa críticamente problemáticas territoriales y ambientales, y lidera acciones de prevención y cuidado."}
 },
 "Gestiona responsablemente los recursos económicos": {
-  estandar:"Comprende las relaciones entre los elementos del sistema económico y financiero, toma conciencia de que los recursos son escasos, y administra los recursos propios y familiares tomando decisiones informadas.",
-  fuente:"CNEB - Programa Curricular de Educación Primaria, MINEDU 2016, VI ciclo",
+  estandar:"Gestiona responsablemente los recursos económicos al utilizar el dinero y otros recursos como consumidor informado y al realizar acciones de ahorro, inversión y cuidado de ellos. Explica el papel de la publicidad frente a las decisiones de consumo y en la planificación de los presupuestos personales y familiares, así como la importancia de cumplir con el pago de impuestos, tributos y deudas como medio para el bienestar común. Explica los roles que cumplen las empresas y el Estado respecto a la satisfacción de las necesidades económicas y financieras de las personas.",
+  fuente:"CNEB - Programa Curricular de Educación Primaria, MINEDU 2016, V ciclo",
   capacidades:["Comprende las relaciones entre los elementos del sistema económico y financiero","Toma decisiones económicas y financieras"],
   rubrica:{C:"Reconoce que el dinero sirve para comprar cosas, sin identificar relaciones más amplias.",B:"Explica de forma sencilla el origen de los recursos familiares y la necesidad de administrarlos.",A:"Comprende las relaciones económicas básicas y toma decisiones responsables sobre sus propios recursos.",AD:"Analiza críticamente el sistema económico y financiero y propone decisiones informadas para el bienestar familiar."}
 },
 "Indaga mediante métodos científicos para construir sus conocimientos": {
-  estandar:"Formula preguntas e hipótesis, propone y ejecuta procedimientos para observar, medir y comparar información, y comunica sus conclusiones evaluando si confirman o refutan su hipótesis inicial.",
-  fuente:"CNEB - Programa Curricular de Educación Primaria, MINEDU 2016, VI ciclo",
+  estandar:"Indaga las causas o describe un objeto o fenómeno que identifica para formular preguntas e hipótesis en las que relaciona las variables que intervienen y que se pueden observar. Propone estrategias para observar o generar una situación controlada en la cual registra evidencias de cómo una variable independiente afecta a otra dependiente. Establece relaciones entre los datos, los interpreta y los contrasta con información confiable. Evalúa y comunica sus conclusiones y procedimientos.",
+  fuente:"CNEB - Programa Curricular de Educación Primaria, MINEDU 2016, V ciclo",
   capacidades:["Problematiza situaciones","Diseña estrategias para hacer indagación","Genera y registra datos e información","Analiza datos e información","Evalúa y comunica el proceso y resultados de su indagación"],
   rubrica:{C:"Observa fenómenos simples pero necesita apoyo para formular preguntas o hipótesis.",B:"Formula preguntas sencillas y ejecuta procedimientos básicos de observación con ayuda del docente.",A:"Formula hipótesis, diseña y ejecuta procedimientos de indagación, y comunica sus conclusiones con autonomía.",AD:"Diseña indagaciones rigurosas, contrasta resultados con fuentes confiables y argumenta sus conclusiones científicas."}
 },
 "Explica el mundo físico basándose en conocimientos sobre los seres vivos, materia y energía, biodiversidad, Tierra y universo": {
-  estandar:"Compara las características de los seres vivos, la materia y la energía, explica las relaciones entre estos y su ambiente, y justifica sus explicaciones con evidencia y conocimientos científicos.",
-  fuente:"CNEB - Programa Curricular de Educación Primaria, MINEDU 2016, VI ciclo",
+  estandar:"Explica, con base en evidencia con respaldo científico, las relaciones entre: propiedades o funciones macroscópicas de los cuerpos, materiales o seres vivos con su estructura y movimiento microscópico; la reproducción sexual con la diversidad genética; los ecosistemas con la diversidad de especies; el relieve con la actividad interna de la Tierra. Relaciona el descubrimiento científico o la innovación tecnológica con sus impactos. Justifica su posición frente a situaciones controversiales sobre el uso de la tecnología y el saber científico.",
+  fuente:"CNEB - Programa Curricular de Educación Primaria, MINEDU 2016, V ciclo",
   capacidades:["Comprende y usa conocimientos sobre los seres vivos, materia y energía, biodiversidad, Tierra y universo","Evalúa las implicancias del saber y quehacer científico y tecnológico"],
   rubrica:{C:"Describe características básicas de los seres vivos sin relacionarlas con su ambiente.",B:"Explica relaciones sencillas entre los seres vivos y su ambiente con apoyo.",A:"Explica con sus propias palabras relaciones entre materia, energía, seres vivos y ambiente, apoyándose en evidencia.",AD:"Argumenta explicaciones científicas complejas sobre el mundo físico, contrastando evidencia de diversas fuentes."}
 },
 "Diseña y construye soluciones tecnológicas para resolver problemas de su entorno": {
-  estandar:"Determina un problema tecnológico y sus causas, diseña una alternativa de solución con conocimientos científicos o prácticos, construye su solución y evalúa comprobando su funcionamiento.",
-  fuente:"CNEB - Programa Curricular de Educación Primaria, MINEDU 2016, VI ciclo",
+  estandar:"Diseña y construye soluciones tecnológicas al identificar las causas que generan problemas tecnológicos y propone alternativas de solución con base en conocimientos científicos. Representa una de ellas incluyendo sus partes o etapas, a través de esquemas o dibujos estructurados. Establece características de forma, estructura y función y explica el procedimiento, los recursos de implementación; los ejecuta usando herramientas y materiales seleccionados; verifica el funcionamiento de la solución tecnológica detectando imprecisiones y realiza ajustes para mejorarlo. Explica el procedimiento, conocimiento científico aplicado y limitaciones de la solución tecnológica. Evalúa su funcionamiento a través de pruebas considerando los requerimientos establecidos y propone mejoras. Infiere impactos de la solución tecnológica.",
+  fuente:"CNEB - Programa Curricular de Educación Primaria, MINEDU 2016, V ciclo",
   capacidades:["Determina una alternativa de solución tecnológica","Diseña la alternativa de solución tecnológica","Implementa y valida la alternativa de solución tecnológica","Evalúa y comunica el funcionamiento de su solución tecnológica"],
   rubrica:{C:"Identifica problemas simples de su entorno con apoyo directo del docente.",B:"Propone soluciones tecnológicas sencillas, con dificultad para justificar su diseño.",A:"Diseña, construye y evalúa soluciones tecnológicas que responden a problemas de su entorno.",AD:"Diseña soluciones tecnológicas innovadoras, las evalúa críticamente y propone mejoras fundamentadas."}
 },
 "Aprecia de manera crítica manifestaciones artístico-culturales": {
-  estandar:"Percibe manifestaciones artístico-culturales de su entorno y de otras culturas, describe las ideas y emociones que le transmiten, y las relaciona con su contexto de creación emitiendo una opinión personal.",
-  fuente:"CNEB - Programa Curricular de Educación Primaria, MINEDU 2016, VI ciclo",
+  estandar:"Aprecia de manera crítica manifestaciones artístico-culturales al interpretar las cualidades expresivas de los elementos del arte, la estructura y los medios utilizados en una manifestación artístico-cultural y explica cómo transmite mensajes, ideas y sentimientos. Investiga los contextos donde se originan manifestaciones artístico-culturales tradicionales y contemporáneas e identifica cómo los cambios, las tradiciones, las creencias y los valores revelan la manera en que una determinada persona o sociedad ha vivido. Genera hipótesis sobre el significado y las diversas intenciones que puede tener una manifestación creada en contextos históricos y culturales diferentes.",
+  fuente:"CNEB - Programa Curricular de Educación Primaria, MINEDU 2016, V ciclo",
   capacidades:["Percibe manifestaciones artístico-culturales","Contextualiza las manifestaciones artístico-culturales","Reflexiona creativa y críticamente"],
   rubrica:{C:"Observa manifestaciones artísticas simples sin expresar una opinión propia.",B:"Describe lo que observa en una obra artística con apoyo, con dificultad para relacionarla con su contexto.",A:"Describe y relaciona manifestaciones artístico-culturales con su contexto, emitiendo una opinión fundamentada.",AD:"Analiza críticamente manifestaciones artísticas de diversas culturas y argumenta con solidez su apreciación."}
 },
 "Crea proyectos desde los lenguajes artísticos": {
-  estandar:"Explora y experimenta lenguajes del arte, combina elementos visuales, sonoros o kinestésicos para transmitir ideas, y aplica procesos creativos siguiendo intenciones expresivas propias.",
-  fuente:"CNEB - Programa Curricular de Educación Primaria, MINEDU 2016, VI ciclo",
+  estandar:"Crea proyectos artísticos individuales o colaborativos explorando formas alternativas de combinar y usar elementos, medios, materiales y técnicas artísticas y tecnologías para la resolución de problemas creativos. Genera ideas investigando una variedad de fuentes y manipulando los elementos de los diversos lenguajes de las artes (danza, música, teatro, artes visuales) para evaluar cuáles se ajustan mejor a sus intenciones. Planifica y produce trabajos que comunican ideas y experiencias personales y sociales e incorpora influencias de su propia comunidad y de otras culturas. Registra sus procesos, identifica los aspectos esenciales de sus trabajos y los va modificando para mejorarlos. Planifica los espacios de presentación considerando sus intenciones y presenta sus descubrimientos y creaciones a una variedad de audiencias. Evalúa si logra sus intenciones de manera efectiva.",
+  fuente:"CNEB - Programa Curricular de Educación Primaria, MINEDU 2016, V ciclo",
   capacidades:["Explora y experimenta los lenguajes del arte","Aplica procesos creativos","Evalúa y socializa sus procesos y proyectos"],
   rubrica:{C:"Explora materiales artísticos de forma libre, sin una intención expresiva clara.",B:"Combina elementos artísticos sencillos para expresar una idea, con apoyo del docente.",A:"Crea proyectos artísticos con intención expresiva propia, combinando distintos elementos y lenguajes.",AD:"Crea proyectos artísticos originales y complejos, y fundamenta las decisiones creativas que tomó."}
 },
 "Construye su identidad como persona humana, amada por Dios, digna, libre y trascendente": {
-  estandar:"Conoce y valora su dignidad como persona amada por Dios, relaciona su experiencia personal con la vida de Jesús y los valores del Evangelio, y actúa de acuerdo con su fe en su vida cotidiana.",
-  fuente:"Programa Curricular de Educación Primaria, MINEDU 2016 - Educación Religiosa, VI ciclo",
+  estandar:"Comprende el amor de Dios desde la creación respetando la dignidad y la libertad de la persona humana. Explica la acción de Dios presente en el Plan de Salvación. Demuestra su amor a Dios y al prójimo participando en su comunidad y realizando obras de caridad que le ayudan en su crecimiento personal y espiritual. Fomenta una convivencia cristiana basada en el diálogo, el respeto, la tolerancia y el amor fraterno fortaleciendo su identidad como hijo de Dios.",
+  fuente:"Programa Curricular de Educación Primaria, MINEDU 2016 - Educación Religiosa, V ciclo",
   capacidades:["Conoce a Dios y asume su identidad religiosa y espiritual como persona digna, libre y trascendente"],
   rubrica:{C:"Reconoce que Dios lo ama, pero le cuesta relacionarlo con su vida diaria.",B:"Relaciona algunos valores del Evangelio con situaciones sencillas de su vida cotidiana.",A:"Reconoce y valora su dignidad como persona amada por Dios y actúa según los valores del Evangelio.",AD:"Vive de manera coherente su fe, relacionando con profundidad los valores del Evangelio con sus decisiones diarias."}
 },
 "Asume la experiencia del encuentro personal y comunitario con Dios en su proyecto de vida en coherencia con su creencia religiosa": {
-  estandar:"Cultiva y expresa su experiencia de encuentro con Dios en su vida personal y comunitaria, participa de la vida de su comunidad de fe, y da razón de sus creencias con respeto hacia otras manifestaciones religiosas.",
-  fuente:"Programa Curricular de Educación Primaria, MINEDU 2016 - Educación Religiosa, VI ciclo",
+  estandar:"Expresa coherencia entre lo que cree, dice y hace en su compromiso personal a la luz de textos bíblicos. Comprende su dimensión religiosa, espiritual y trascendente que le permita asumir cambios de comportamiento en diversos contextos a la luz del Evangelio. Interioriza la presencia de Dios viviendo el encuentro personal y comunitario, para colaborar en la construcción de una comunidad de fe guiada por las enseñanzas de Jesucristo. Asume su rol protagónico mediante actitudes concretas a imagen de Jesucristo y colabora en el cambio que necesita la sociedad.",
+  fuente:"Programa Curricular de Educación Primaria, MINEDU 2016 - Educación Religiosa, V ciclo",
   capacidades:["Cultiva y expresa su fe de modo comprensible y respetuoso, participando en su comunidad de fe"],
   rubrica:{C:"Participa de actividades religiosas sin comprender su significado.",B:"Reconoce el sentido de algunas prácticas de su comunidad de fe, con apoyo del docente.",A:"Participa activamente en su comunidad de fe y expresa el sentido de su experiencia religiosa con sus propias palabras.",AD:"Da razón fundamentada de su fe, respeta otras creencias, y vive coherentemente su experiencia religiosa."}
 }
@@ -987,20 +1136,12 @@ const MICRO_SUGERENCIAS = {
   'Tutoría / Convivencia': 'Reflexión breve diaria (5 min) retomando "{tema}": una situación en la que se aplicó o se pudo aplicar.'
 };
 
-document.getElementById('btnSugerirMicro').addEventListener('click', ()=>{
-  const area = document.getElementById('area').value;
-  const tema = document.getElementById('tema').value.trim() || 'el tema de hoy';
-  const plantilla = MICRO_SUGERENCIAS[area] || 'Repaso corto de 5-10 min sobre "{tema}", repetido a diario hasta la próxima sesión (constancia, no intensidad).';
-  document.getElementById('micropractica').value = plantilla.replace('{tema}', tema);
-});
-
 /* ============================================================
    BANCO DE PREGUNTAS MANUAL (reemplaza la generación por IA,
    que solo funciona dentro de claude.ai y no en el celular)
 ============================================================ */
 let bancoActual = []; // [{pregunta, opciones:[4], correcta}]
 let temaKeyActual = '';
-let fotoTemaBase64 = null;
 
 function temaKey(area, competencia, tema){
   return (area+'|'+competencia+'|'+tema).toLowerCase().trim();
@@ -1043,9 +1184,7 @@ async function prepararSesion(){
   }catch(e){ guardado = null; }
 
   bancoActual = (guardado && guardado.preguntas) ? guardado.preguntas : [];
-  fotoTemaBase64 = (guardado && guardado.foto) ? guardado.foto : null;
 
-  renderFotoPreview();
   renderBanco();
   document.getElementById('bancoCard').style.display = 'block';
 
@@ -1056,19 +1195,6 @@ async function prepararSesion(){
     document.getElementById('bancoGuardadoOk').style.display = 'none';
   }
 }
-
-function renderFotoPreview(){
-  const box = document.getElementById('fotoTemaPreview');
-  box.innerHTML = fotoTemaBase64 ? `<img src="${fotoTemaBase64}" style="max-width:100%;max-height:220px;border-radius:8px;border:1px solid var(--line);">` : '';
-}
-
-document.getElementById('fotoTema').addEventListener('change', (e)=>{
-  const file = e.target.files[0];
-  if(!file) return;
-  const reader = new FileReader();
-  reader.onload = ()=>{ fotoTemaBase64 = reader.result; renderFotoPreview(); };
-  reader.readAsDataURL(file);
-});
 
 function renderBanco(){
   const box = document.getElementById('bancoList');
@@ -1138,69 +1264,34 @@ if(window.pdfjsLib){
   pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 }
 
-function parsePDFTextoAPreguntas(textoOriginal){
-  let texto = textoOriginal;
+function parsePDFTextoAPreguntas(texto){
+  // Formato compacto: si las opciones o la respuesta vienen pegadas en la
+  // misma línea que el enunciado (típico al extraer texto de un PDF), se
+  // separan primero en líneas propias para que el resto del parseo funcione igual.
+  texto = texto.replace(/([^\n])\s+([\*✓✔]?)([abcd])[\.\)]\s*/gi, '$1\n$2$3) ');
+  texto = texto.replace(/([^\n])\s+((?:rpta|respuesta correcta|respuesta|clave|correcta)\s*:)/gi, '$1\n$2');
 
-  // Sinónimos aceptados para el encabezado de cada pregunta y para la
-  // marca de la respuesta correcta. Cubren los formatos más comunes en
-  // evaluaciones peruanas/latinoamericanas (impresas, escaneadas o
-  // exportadas desde Word/Canva a PDF).
-  const SIN_RPTA = 'rpta|resp(?:uesta)?(?:\\s+correcta)?|clave|correcta|soluci[oó]n(?:ario)?|answer|ans';
-
-  // 1) Normaliza encabezados de pregunta pegados al texto siguiente sin
-  //    salto de línea, por ejemplo "Pregunta 6La balanza..." o
-  //    "N°3¿Cuánto..." -> cada uno pasa a su propia línea.
-  const patronesEncabezado = [
-    /pregunta\s*n?[°º]?\s*\d{1,2}/gi,
-    /[íi]tem\s*n?[°º]?\s*\d{1,2}/gi,
-    /\bn[°º]\s*\d{1,2}/gi
-  ];
-  patronesEncabezado.forEach(re=>{
-    const src = re.source;
-    texto = texto.replace(new RegExp('([^\\n])\\s*('+src+')','gi'), '$1\n$2');
-    texto = texto.replace(new RegExp('('+src+')(?=[A-ZÁÉÍÓÚÑ¿])','gi'), '$1\n');
-  });
-
-  // 2) Quita casilleros antes de la letra de opción: "( )", "[ ]", "□", "○".
-  //    Si el casillero venía marcado (X, ✓, ✔, relleno) se convierte en
-  //    asterisco para reconocer esa opción como la correcta.
-  texto = texto.replace(/[\(\[]\s*([xX✓✔•]?)\s*[\)\]]\s*(?=[A-Da-d]\s*[\.\)\]:\-])/g,
-    (m,g1)=> g1 ? '*' : '');
-  texto = texto.replace(/[□○]\s*(?=[A-Da-d]\s*[\.\)\]:\-])/g, '');
-
-  // 3) Separa opciones o marcas de respuesta pegadas en la misma línea del
-  //    enunciado (frecuente al extraer texto de un PDF de una sola pasada).
-  texto = texto.replace(/([^\n])\s+([\*✓✔]?)([abcdABCD])[\.\)]\s*/g, '$1\n$2$3) ');
-  texto = texto.replace(new RegExp('([^\\n])\\s+((?:'+SIN_RPTA+')\\s*:)', 'gi'), '$1\n$2');
-
-  // 4) Separa por número de pregunta. Admite "1.", "1)", "1-", "1:",
-  //    "Pregunta 1", "Ítem 1", "N° 1" (con o sin puntuación después del
-  //    número) al inicio de línea.
+  // Normaliza saltos de línea y separa por número de pregunta
+  // (admite "1.", "1)", "1-", "1:" al inicio de línea)
   const lineas = texto.split(/\r?\n/).map(l=>l.trim()).filter(l=>l.length>0);
   const bloques = [];
   let actual = [];
-  let numActual = null;
-  const reNumPreguntaPalabra = /^(?:pregunta|[íi]tem)\s*n?[°º]?\s*(\d{1,2})\b[\.\)\-:]?\s*/i;
-  const reNumPreguntaSimbolo = /^n[°º]\s*(\d{1,2})\b[\.\)\-:]?\s*/i;
-  const reNumPreguntaDigito = /^(\d{1,2})[\.\)\-:]\s*/;
+  const reNumPregunta = /^\d{1,2}[\.\)\-:]\s*/;
 
   lineas.forEach(linea=>{
-    let m = linea.match(reNumPreguntaPalabra) || linea.match(reNumPreguntaSimbolo) || linea.match(reNumPreguntaDigito);
-    if(m){
-      if(actual.length) bloques.push({num: numActual, lineas: actual});
-      numActual = parseInt(m[1], 10);
-      const resto = linea.slice(m[0].length).trim();
-      actual = resto ? [resto] : [];
+    if(reNumPregunta.test(linea)){
+      if(actual.length) bloques.push(actual);
+      actual = [linea.replace(reNumPregunta,'')];
     } else {
       actual.push(linea);
     }
   });
-  if(actual.length) bloques.push({num: numActual, lineas: actual});
+  if(actual.length) bloques.push(actual);
 
   // Admite letra entre paréntesis o corchetes, con . ) ] : o - como separador,
-  // y un asterisco o check (✓/✔) antes de la letra como marca de opción correcta.
+  // y un asterisk o check (✓/✔) antes de la letra como marca de opción correcta.
   const reOpcion = /^[\(\[]?\s*([abcd])[\.\)\]:\-]\s*(.+)$/i;
-  const reRpta = new RegExp('^(?:'+SIN_RPTA+')\\s*:?\\s*[\\(\\[]?([abcd])\\b', 'i');
+  const reRpta = /^(rpta|respuesta correcta|respuesta|clave|correcta)\s*:?\s*[\(\[]?([abcd])\b/i;
   const reMarcaCorrecta = /^[\*✓✔]/;
 
   const preguntas = [];
@@ -1209,13 +1300,13 @@ function parsePDFTextoAPreguntas(textoOriginal){
     const opciones = {a:'', b:'', c:'', d:''};
     let correctaLetra = null;
 
-    bloque.lineas.forEach(linea=>{
+    bloque.forEach(linea=>{
       const marcada = reMarcaCorrecta.test(linea);
       const lineaLimpia = marcada ? linea.replace(reMarcaCorrecta,'').trim() : linea;
       const mOpcion = lineaLimpia.match(reOpcion);
       const mRpta = lineaLimpia.match(reRpta);
       if(mRpta){
-        correctaLetra = mRpta[1].toLowerCase();
+        correctaLetra = mRpta[2].toLowerCase();
       } else if(mOpcion){
         opciones[mOpcion[1].toLowerCase()] = mOpcion[2].trim();
         if(marcada) correctaLetra = mOpcion[1].toLowerCase();
@@ -1227,49 +1318,17 @@ function parsePDFTextoAPreguntas(textoOriginal){
     const opcionesArr = [opciones.a, opciones.b, opciones.c, opciones.d];
     const completa = preguntaTexto.trim() && opcionesArr.every(o=>o && o.trim());
     if(completa){
+      const idxCorrecta = correctaLetra ? ['a','b','c','d'].indexOf(correctaLetra) : 0;
       preguntas.push({
-        num: bloque.num,
         pregunta: preguntaTexto.trim(),
         opciones: opcionesArr,
-        correcta: correctaLetra ? ['a','b','c','d'].indexOf(correctaLetra) : -1,
+        correcta: idxCorrecta >= 0 ? idxCorrecta : 0,
         rptaDetectada: !!correctaLetra
       });
     }
   });
 
-  // 5) Si alguna pregunta quedó sin respuesta detectada junto a sus
-  //    opciones, se busca una "clave de respuestas" al final del documento
-  //    (formato típico de exámenes impresos: tabla o lista aparte con
-  //    número + letra) y se completa la respuesta desde ahí por número
-  //    de pregunta.
-  if(preguntas.some(p=>!p.rptaDetectada)){
-    const inicioClave = textoOriginal.search(/clave\s+de\s+respuestas|hoja\s+de\s+respuestas|respuestas\s+correctas|soluci[oó]nario|answer\s*key/i);
-    if(inicioClave >= 0){
-      const bloqueClave = textoOriginal.slice(inicioClave);
-      const reParClave = /(\d{1,2})\s*[\.\)\-:]?\s*([abcdABCD])\b/g;
-      const mapaClave = {};
-      let mm;
-      while((mm = reParClave.exec(bloqueClave)) !== null){
-        mapaClave[parseInt(mm[1],10)] = mm[2].toLowerCase();
-      }
-      preguntas.forEach(p=>{
-        if(!p.rptaDetectada && p.num!=null && mapaClave[p.num]){
-          p.correcta = ['a','b','c','d'].indexOf(mapaClave[p.num]);
-          p.rptaDetectada = true;
-        }
-      });
-    }
-  }
-
-  // Nunca se adivina una respuesta: si no se pudo determinar con certeza
-  // cuál opción es la correcta, esa pregunta se descarta en vez de
-  // marcarla por defecto (evita cargar una respuesta incorrecta sin avisar).
-  const reconocidas = preguntas.filter(p=>p.rptaDetectada);
-  const descartadas = preguntas.length - reconocidas.length;
-
-  const resultado = reconocidas.slice(0,6);
-  resultado.descartadasPorFaltaDeRespuesta = descartadas;
-  return resultado;
+  return preguntas.slice(0,6);
 }
 
 document.getElementById('pdfPreguntas').addEventListener('change', async (e)=>{
@@ -1302,23 +1361,22 @@ document.getElementById('pdfPreguntas').addEventListener('change', async (e)=>{
     }
 
     const preguntasDetectadas = parsePDFTextoAPreguntas(textoCompleto);
-    const descartadas = preguntasDetectadas.descartadasPorFaltaDeRespuesta || 0;
 
     if(preguntasDetectadas.length === 0){
-      statusBox.innerHTML = `<span style="color:var(--danger,#b3261e);">No se pudo reconocer ninguna pregunta con su respuesta correcta. Verifica que cada pregunta esté numerada (1. / 1) / Pregunta 1 / N° 1), tenga 4 opciones (a/b/c/d) y que la respuesta correcta esté indicada de alguna forma (Rpta:, Respuesta:, Clave:, un casillero marcado, o una "Clave de respuestas" al final del documento). Si el PDF es una imagen escaneada, no tiene texto seleccionable y no se puede leer así. Revisa el PDF o escribe las preguntas manualmente abajo.</span>`;
+      statusBox.innerHTML = `<span style="color:var(--danger,#b3261e);">No se pudo reconocer ninguna pregunta. Verifica que cada pregunta esté numerada (1. / 1) / 1-) y tenga 4 opciones marcadas a) b) c) d). Si el PDF es una imagen escaneada, no tiene texto seleccionable y no se puede leer así. Revisa el PDF o escribe las preguntas manualmente abajo.</span>`;
       return;
     }
 
+    const sinRpta = preguntasDetectadas.filter(q=>!q.rptaDetectada).length;
+
     // Las preguntas se cargan tal cual se detectaron en el PDF, sin alterar
     // el orden de las opciones a/b/c/d ni la letra marcada como correcta.
-    // Nunca se adivina una respuesta: si no se pudo determinar con certeza,
-    // esa pregunta se descarta en vez de importarla con una respuesta incierta.
     bancoActual = preguntasDetectadas;
     ocultarComenzar();
     renderBanco();
 
-    statusBox.innerHTML = `<span style="color:var(--good,#2e7d32);">✔ Se importaron ${preguntasDetectadas.length} pregunta(s), tal como aparecen en el PDF (mismo orden de opciones a/b/c/d y misma respuesta correcta marcada).</span>
-      ${descartadas>0 ? `<br><span style="color:var(--danger,#b3261e);">⚠ Se descartaron ${descartadas} pregunta(s) del PDF porque no se pudo determinar con certeza cuál era la respuesta correcta (no se detectó "Rpta:", casillero marcado, ni una clave de respuestas). Agrégalas manualmente si las necesitas.</span>` : ''}
+    statusBox.innerHTML = `<span style="color:var(--good,#2e7d32);">✔ Se importaron ${preguntasDetectadas.length} pregunta(s), tal como aparecen en el PDF (mismo orden de opciones a/b/c/d).</span>
+      ${sinRpta>0 ? `<br><span style="color:var(--danger,#b3261e);">⚠ En ${sinRpta} pregunta(s) no se detectó la línea "Rpta:" — revisa cuál opción quedó marcada como correcta antes de guardar.</span>` : ''}
       <br>Revisa el texto y las opciones abajo antes de guardar; el reconocimiento es automático por patrones, no por inteligencia artificial, así que puede tener errores.`;
 
   }catch(err){
@@ -1402,8 +1460,6 @@ function renderListaExamenes(box, items, {compact}={}){
 
       temaKeyActual = it.key.replace(/^banco:/,'');
       bancoActual = d.preguntas || [];
-      fotoTemaBase64 = d.foto || null;
-      renderFotoPreview();
       renderBanco();
       document.getElementById('bancoCard').style.display = 'block';
       document.getElementById('bancoGuardadoOk').style.display = bancoActual.length>0 ? 'block' : 'none';
@@ -1454,7 +1510,6 @@ document.getElementById('btnGuardarBanco').addEventListener('click', async ()=>{
 
   const paquete = {
     preguntas: bancoActual,
-    foto: fotoTemaBase64,
     area: document.getElementById('area').value,
     grado: document.getElementById('grado').value,
     competencia: document.getElementById('competencia').value.trim(),
@@ -1653,12 +1708,26 @@ function updateQueueChips(){
   });
 }
 
+// Mueve al estudiante actual al FINAL de la cola de hoy, sin perder a
+// nadie más de lugar, para retomarlo más tarde (por ejemplo, si todavía
+// no está listo para responder). Su turno se reinicia desde la
+// pregunta 1 cuando le vuelva a tocar.
+function saltarEstudianteActual(){
+  const s = state.currentSession;
+  const id = s.seleccionados[quizQueueIndex];
+  s.seleccionados.splice(quizQueueIndex, 1);
+  s.seleccionados.push(id);
+  renderQueueUI();
+  startNextStudent();
+}
+
 function renderQuizQuestion(){
   const s = state.currentSession;
   const studentId = s.seleccionados[quizQueueIndex];
   const student = ROSTER.find(r=>r.id===studentId);
   const q = s.preguntas[quizQIndex];
   const area = document.getElementById('quizArea');
+  const hayMasEstudiantes = s.seleccionados.length > 1;
   area.innerHTML = `
     <div class="card" style="padding:0; overflow:hidden;">
       <div class="quiz-student">
@@ -1671,12 +1740,15 @@ function renderQuizQuestion(){
         <div class="quiz-opts" id="quizOpts">
           ${q.opciones.map((op,i)=>`<button class="quiz-opt" data-i="${i}"><span class="quiz-opt-letter">${String.fromCharCode(97+i)}</span><span class="quiz-opt-text">${op}</span></button>`).join('')}
         </div>
+        ${hayMasEstudiantes ? `<button type="button" class="btn outline small" id="btnSaltarEstudiante" style="margin-top:10px;">⏭ Saltar por ahora (retomar al final)</button>` : ''}
       </div>
     </div>
   `;
   document.querySelectorAll('.quiz-opt').forEach(btn=>{
     btn.addEventListener('click', ()=>answerQuiz(Number(btn.dataset.i)));
   });
+  const btnSaltar = document.getElementById('btnSaltarEstudiante');
+  if(btnSaltar) btnSaltar.addEventListener('click', saltarEstudianteActual);
 }
 
 function renderBonusQuestion(){
@@ -1697,12 +1769,15 @@ function renderBonusQuestion(){
         <div class="quiz-opts" id="quizOpts">
           ${q.opciones.map((op,i)=>`<button class="quiz-opt" data-i="${i}"><span class="quiz-opt-letter">${String.fromCharCode(97+i)}</span><span class="quiz-opt-text">${op}</span></button>`).join('')}
         </div>
+        ${s.seleccionados.length > 1 ? `<button type="button" class="btn outline small" id="btnSaltarEstudiante" style="margin-top:10px;">⏭ Saltar por ahora (retomar al final)</button>` : ''}
       </div>
     </div>
   `;
   document.querySelectorAll('.quiz-opt').forEach(btn=>{
     btn.addEventListener('click', ()=>answerBonus(Number(btn.dataset.i)));
   });
+  const btnSaltar = document.getElementById('btnSaltarEstudiante');
+  if(btnSaltar) btnSaltar.addEventListener('click', saltarEstudianteActual);
 }
 
 function answerQuiz(chosenIndex){
@@ -1999,7 +2074,7 @@ function volverATomarSesion(sesionId){
   document.getElementById('area').value = s.area;
   populateCompetencias();
   document.getElementById('competencia').value = s.competencia;
-  document.getElementById('grado').value = s.grado || '5.° grado de primaria (VI ciclo)';
+  document.getElementById('grado').value = s.grado || '5.° grado de primaria (V ciclo)';
   document.getElementById('tema').value = s.tema || '';
   document.getElementById('micropractica').value = s.micropractica || '';
   document.getElementById('thB').value = (s.thresholds && s.thresholds.B) ?? 50;
@@ -2013,8 +2088,6 @@ function volverATomarSesion(sesionId){
 
   temaKeyActual = (s.area+'|'+s.competencia+'|'+s.tema).toLowerCase().replace(/[^a-z0-9]+/g,'_');
   bancoActual = JSON.parse(JSON.stringify(s.preguntas || []));
-  fotoTemaBase64 = null;
-  renderFotoPreview();
   renderBanco();
   document.getElementById('bancoCard').style.display = 'block';
   document.getElementById('bancoGuardadoOk').style.display = bancoActual.length===6 ? 'block' : 'none';
@@ -2089,8 +2162,10 @@ if('serviceWorker' in navigator){
 (async function init(){
   populateCompetencias();
   await loadPersisted();
+  await loadRosterOverrides();
   await checkAndResetAttendanceForNewDay();
   renderRoster();
+  renderGestionEstudiantes();
 
   try{
     const items = await listarExamenesGuardados();
