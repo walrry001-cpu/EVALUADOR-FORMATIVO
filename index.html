@@ -452,10 +452,6 @@
 
       <div class="fixed-quiz-note">⚡ Cada evaluación usa <b>5 preguntas base</b> (100%) + <b>1 pregunta adicional</b> que solo se activa cuando el estudiante acierta las 5 base, y define el nivel <b>AD</b>.</div>
 
-      <label>⚡ Micropráctica diaria de refuerzo (neuroaprendizaje — 5 a 10 min, todos los días de la semana)</label>
-      <p class="hint" style="margin-top:-4px;">El cerebro retiene más por constancia que por intensidad. Escribe un reto corto de recuperación activa ligado al tema de hoy; se repite a diario (no como tarea extensa) hasta la próxima sesión.</p>
-      <textarea id="micropractica" rows="2" placeholder='Ej: 2 divisiones exactas sencillas por día en la libreta, revisadas al inicio de cada clase.' style="width:100%;resize:vertical;"></textarea>
-
       <label>Umbrales de calificación (% de aciertos en las 5 preguntas base)</label>
       <div class="rubric-grid" id="rubricThresholds">
         <div class="rubric-cell"><div class="lvl badge C">C</div><div style="font-size:11px;color:var(--ink-soft)">hasta antes de</div><input type="number" id="thB" value="50" min="1" max="99">%</div>
@@ -516,13 +512,8 @@
 
   <!-- TAB: EVALUACION -->
   <section id="tab-evaluacion" style="display:none;">
-    <div class="card" id="microCard" style="display:none; border-left:4px solid var(--gold, #c98a2e);">
-      <h2>⚡ Micropráctica diaria (recordatorio)</h2>
-      <p class="hint" id="microCardText"></p>
-      <p class="hint" style="margin-top:6px;">Repite este reto corto de 5-10 min todos los días hasta la próxima sesión de evaluación. La constancia fija más el aprendizaje que una sola práctica intensa.</p>
-    </div>
     <div class="card" id="selectionCard">
-      <h2>Orden de llamada de hoy (N.° 1 al 28)</h2>
+      <h2>Orden de llamada de hoy (N.° 1 al <span id="totalRosterHoy">28</span>)</h2>
       <p class="hint" id="selectionReason">Genera una sesión primero en la pestaña "Nueva sesión".</p>
       <div class="queue-list" id="queueList"></div>
       <button class="btn outline small" id="btnDescartarSesionActiva" style="margin-top:10px;">🗑️ Descartar esta evaluación</button>
@@ -551,6 +542,12 @@
       <h2>Registro histórico de evaluaciones</h2>
       <p class="hint">Todas las sesiones guardadas, por área y competencia.</p>
       <div id="registroList"></div>
+    </div>
+    <div class="card">
+      <h2>📄 Importar historial desde un PDF de informe anterior</h2>
+      <p class="hint">Si perdiste el registro guardado en este dispositivo (por ejemplo, cambiaste de celular o borraste el caché sin haber hecho una copia de seguridad), puedes reconstruirlo a partir de los PDF de "Informe de Evaluación Formativa" que ya descargaste antes. Solo se recupera el resultado de cada estudiante (nivel, aciertos, conclusión) — las 6 preguntas originales de ese día NO quedan guardadas, ya que el PDF no las incluye. Si un estudiante aparece a la vez como evaluado y como ausente en el mismo PDF (el error de haberlo respondido por error en vez de marcarlo ausente), se descarta su resultado y se respeta que estuvo ausente.</p>
+      <input type="file" id="inputImportarInformePDF" accept="application/pdf" multiple>
+      <div id="importarInformeStatus" style="margin-top:8px;font-size:12.5px;"></div>
     </div>
   </section>
 
@@ -622,6 +619,8 @@ function aplicarRosterOverrides(){
   ROSTER = base.concat(rosterOverrides.agregados);
   ROSTER.forEach(s => { if(!(s.id in state.attendance)) state.attendance[s.id] = true; });
   renumerarRoster();
+  const totalSpan = document.getElementById('totalRosterHoy');
+  if(totalSpan) totalSpan.textContent = ROSTER.length;
 }
 async function loadRosterOverrides(){
   try{
@@ -663,7 +662,7 @@ async function eliminarEstudianteYArchivos(id){
   rosterOverrides.agregados = rosterOverrides.agregados.filter(s=>s.id!==id);
   await saveRosterOverrides();
 
-  state.pending = state.pending.filter(x=>x!==id);
+  state.pending = state.pending.filter(p => p.id !== id);
   await savePending();
   state.lastSessionEvaluated = (state.lastSessionEvaluated||[]).filter(x=>x!==id);
   await saveLastEvaluated();
@@ -798,7 +797,7 @@ function renderRoster(){
   list.innerHTML = '';
   rosterOrdenado().forEach(s=>{
     const present = state.attendance[s.id];
-    const isPending = state.pending.includes(s.id);
+    const isPending = state.pending.some(p => p.id === s.id);
     const row = document.createElement('div');
     row.className = 'roster-row' + (present ? '' : ' absent');
     row.innerHTML = `
@@ -825,7 +824,7 @@ function updateAttendanceSummary(){
   const present = ROSTER.filter(s=>state.attendance[s.id]).length;
   document.getElementById('presentCount').textContent = present;
   document.getElementById('absentCount').textContent = ROSTER.length - present;
-  document.getElementById('pendingCount').textContent = state.pending.length;
+  document.getElementById('pendingCount').textContent = new Set(state.pending.map(p=>p.id)).size;
 }
 
 /* ============================================================
@@ -987,7 +986,7 @@ async function checkAndResetAttendanceForNewDay(){
 }
 
 /* ============================================================
-   ESTÁNDARES OFICIALES MINEDU — VI CICLO (5.°/6.° grado primaria)
+   ESTÁNDARES OFICIALES MINEDU — V CICLO (5.°/6.° grado primaria)
    Fuente: Currículo Nacional de la Educación Básica (CNEB) y
    Programa Curricular de Educación Primaria, MINEDU 2016.
    Cargados localmente para que la app funcione SIN internet.
@@ -1119,24 +1118,6 @@ function setError(msg){
 }
 
 /* ============================================================
-   MICROPRÁCTICA DIARIA (neuroaprendizaje — recuperación activa,
-   repaso espaciado, constancia sobre intensidad). Se sugiere una
-   plantilla corta según el área elegida; el docente la ajusta al
-   tema exacto de la clase.
-============================================================ */
-const MICRO_SUGERENCIAS = {
-  'Matemática': 'De 2 a 3 ejercicios cortos sobre "{tema}", resueltos sin ayuda en la libreta. Revisión rápida (1-2 min) al inicio de cada clase, no como tarea extensa.',
-  'Comunicación': 'Recuperación activa de 5 min: sin el cuaderno, el estudiante dice o escribe en 2-3 líneas lo que recuerda sobre "{tema}" del día anterior.',
-  'Personal Social': 'Pregunta rápida de inicio de clase (oral o escrita, 5 min): relacionar "{tema}" con un ejemplo de su propia vida o de Cajamarca.',
-  'Ciencia y Tecnología': 'Reto corto diario: explicar con sus propias palabras, en 3 frases, un concepto clave de "{tema}" trabajado en clase.',
-  'Arte y Cultura': 'Repaso breve (5 min): recordar y nombrar en voz alta los elementos vistos sobre "{tema}" antes de continuar con la práctica.',
-  'Educación Física': 'Recordar en 1 minuto, antes de iniciar, la secuencia o regla principal de "{tema}" trabajada la clase anterior.',
-  'Educación Religiosa': 'Pregunta de recuperación activa: ¿qué recuerdas sobre "{tema}"? Compartir en 2-3 frases antes de iniciar la clase.',
-  'Inglés': '3 palabras o frases cortas de "{tema}" repasadas en voz alta cada día, antes de aprender otras nuevas.',
-  'Tutoría / Convivencia': 'Reflexión breve diaria (5 min) retomando "{tema}": una situación en la que se aplicó o se pudo aplicar.'
-};
-
-/* ============================================================
    BANCO DE PREGUNTAS MANUAL (reemplaza la generación por IA,
    que solo funciona dentro de claude.ai y no en el celular)
 ============================================================ */
@@ -1264,34 +1245,69 @@ if(window.pdfjsLib){
   pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 }
 
-function parsePDFTextoAPreguntas(texto){
-  // Formato compacto: si las opciones o la respuesta vienen pegadas en la
-  // misma línea que el enunciado (típico al extraer texto de un PDF), se
-  // separan primero en líneas propias para que el resto del parseo funcione igual.
-  texto = texto.replace(/([^\n])\s+([\*✓✔]?)([abcd])[\.\)]\s*/gi, '$1\n$2$3) ');
-  texto = texto.replace(/([^\n])\s+((?:rpta|respuesta correcta|respuesta|clave|correcta)\s*:)/gi, '$1\n$2');
+function parsePDFTextoAPreguntas(textoOriginal){
+  let texto = textoOriginal;
 
-  // Normaliza saltos de línea y separa por número de pregunta
-  // (admite "1.", "1)", "1-", "1:" al inicio de línea)
+  // Sinónimos aceptados para el encabezado de cada pregunta y para la
+  // marca de la respuesta correcta. Cubren los formatos más comunes en
+  // evaluaciones peruanas/latinoamericanas (impresas, escaneadas o
+  // exportadas desde Word/Canva a PDF).
+  const SIN_RPTA = 'rpta|resp(?:uesta)?(?:\\s+correcta)?|clave|correcta|soluci[oó]n(?:ario)?|answer|ans';
+
+  // 1) Normaliza encabezados de pregunta pegados al texto siguiente sin
+  //    salto de línea, por ejemplo "Pregunta 6La balanza..." o
+  //    "N°3¿Cuánto..." -> cada uno pasa a su propia línea.
+  const patronesEncabezado = [
+    /pregunta\s*n?[°º]?\s*\d{1,2}/gi,
+    /[íi]tem\s*n?[°º]?\s*\d{1,2}/gi,
+    /\bn[°º]\s*\d{1,2}/gi
+  ];
+  patronesEncabezado.forEach(re=>{
+    const src = re.source;
+    texto = texto.replace(new RegExp('([^\\n])\\s*('+src+')','gi'), '$1\n$2');
+    texto = texto.replace(new RegExp('('+src+')(?=[A-ZÁÉÍÓÚÑ¿])','gi'), '$1\n');
+  });
+
+  // 2) Quita casilleros antes de la letra de opción: "( )", "[ ]", "□", "○".
+  //    Si el casillero venía marcado (X, ✓, ✔, relleno) se convierte en
+  //    asterisco para reconocer esa opción como la correcta.
+  texto = texto.replace(/[\(\[]\s*([xX✓✔•]?)\s*[\)\]]\s*(?=[A-Da-d]\s*[\.\)\]:\-])/g,
+    (m,g1)=> g1 ? '*' : '');
+  texto = texto.replace(/[□○]\s*(?=[A-Da-d]\s*[\.\)\]:\-])/g, '');
+
+  // 3) Separa opciones o marcas de respuesta pegadas en la misma línea del
+  //    enunciado (frecuente al extraer texto de un PDF de una sola pasada).
+  texto = texto.replace(/([^\n])\s+([\*✓✔]?)([abcdABCD])[\.\)]\s*/g, '$1\n$2$3) ');
+  texto = texto.replace(new RegExp('([^\\n])\\s+((?:'+SIN_RPTA+')\\s*:)', 'gi'), '$1\n$2');
+
+  // 4) Separa por número de pregunta. Admite "1.", "1)", "1-", "1:",
+  //    "Pregunta 1", "Ítem 1", "N° 1" (con o sin puntuación después del
+  //    número) al inicio de línea.
   const lineas = texto.split(/\r?\n/).map(l=>l.trim()).filter(l=>l.length>0);
   const bloques = [];
   let actual = [];
-  const reNumPregunta = /^\d{1,2}[\.\)\-:]\s*/;
+  let numActual = null;
+  const reNumPreguntaPalabra = /^(?:pregunta|[íi]tem)\s*n?[°º]?\s*(\d{1,2})\b[\.\)\-:]?\s*/i;
+  const reNumPreguntaSimbolo = /^n[°º]\s*(\d{1,2})\b[\.\)\-:]?\s*/i;
+  const reNumPreguntaDigito = /^(\d{1,2})[\.\)\-:]\s*/;
 
   lineas.forEach(linea=>{
-    if(reNumPregunta.test(linea)){
-      if(actual.length) bloques.push(actual);
-      actual = [linea.replace(reNumPregunta,'')];
+    let m = linea.match(reNumPreguntaPalabra) || linea.match(reNumPreguntaSimbolo) || linea.match(reNumPreguntaDigito);
+    if(m){
+      if(actual.length) bloques.push({num: numActual, lineas: actual});
+      numActual = parseInt(m[1], 10);
+      const resto = linea.slice(m[0].length).trim();
+      actual = resto ? [resto] : [];
     } else {
       actual.push(linea);
     }
   });
-  if(actual.length) bloques.push(actual);
+  if(actual.length) bloques.push({num: numActual, lineas: actual});
 
   // Admite letra entre paréntesis o corchetes, con . ) ] : o - como separador,
-  // y un asterisk o check (✓/✔) antes de la letra como marca de opción correcta.
+  // y un asterisco o check (✓/✔) antes de la letra como marca de opción correcta.
   const reOpcion = /^[\(\[]?\s*([abcd])[\.\)\]:\-]\s*(.+)$/i;
-  const reRpta = /^(rpta|respuesta correcta|respuesta|clave|correcta)\s*:?\s*[\(\[]?([abcd])\b/i;
+  const reRpta = new RegExp('^(?:'+SIN_RPTA+')\\s*:?\\s*[\\(\\[]?([abcd])\\b', 'i');
   const reMarcaCorrecta = /^[\*✓✔]/;
 
   const preguntas = [];
@@ -1300,13 +1316,13 @@ function parsePDFTextoAPreguntas(texto){
     const opciones = {a:'', b:'', c:'', d:''};
     let correctaLetra = null;
 
-    bloque.forEach(linea=>{
+    bloque.lineas.forEach(linea=>{
       const marcada = reMarcaCorrecta.test(linea);
       const lineaLimpia = marcada ? linea.replace(reMarcaCorrecta,'').trim() : linea;
       const mOpcion = lineaLimpia.match(reOpcion);
       const mRpta = lineaLimpia.match(reRpta);
       if(mRpta){
-        correctaLetra = mRpta[2].toLowerCase();
+        correctaLetra = mRpta[1].toLowerCase();
       } else if(mOpcion){
         opciones[mOpcion[1].toLowerCase()] = mOpcion[2].trim();
         if(marcada) correctaLetra = mOpcion[1].toLowerCase();
@@ -1318,17 +1334,49 @@ function parsePDFTextoAPreguntas(texto){
     const opcionesArr = [opciones.a, opciones.b, opciones.c, opciones.d];
     const completa = preguntaTexto.trim() && opcionesArr.every(o=>o && o.trim());
     if(completa){
-      const idxCorrecta = correctaLetra ? ['a','b','c','d'].indexOf(correctaLetra) : 0;
       preguntas.push({
+        num: bloque.num,
         pregunta: preguntaTexto.trim(),
         opciones: opcionesArr,
-        correcta: idxCorrecta >= 0 ? idxCorrecta : 0,
+        correcta: correctaLetra ? ['a','b','c','d'].indexOf(correctaLetra) : -1,
         rptaDetectada: !!correctaLetra
       });
     }
   });
 
-  return preguntas.slice(0,6);
+  // 5) Si alguna pregunta quedó sin respuesta detectada junto a sus
+  //    opciones, se busca una "clave de respuestas" al final del documento
+  //    (formato típico de exámenes impresos: tabla o lista aparte con
+  //    número + letra) y se completa la respuesta desde ahí por número
+  //    de pregunta.
+  if(preguntas.some(p=>!p.rptaDetectada)){
+    const inicioClave = textoOriginal.search(/clave\s+de\s+respuestas|hoja\s+de\s+respuestas|respuestas\s+correctas|soluci[oó]nario|answer\s*key/i);
+    if(inicioClave >= 0){
+      const bloqueClave = textoOriginal.slice(inicioClave);
+      const reParClave = /(\d{1,2})\s*[\.\)\-:]?\s*([abcdABCD])\b/g;
+      const mapaClave = {};
+      let mm;
+      while((mm = reParClave.exec(bloqueClave)) !== null){
+        mapaClave[parseInt(mm[1],10)] = mm[2].toLowerCase();
+      }
+      preguntas.forEach(p=>{
+        if(!p.rptaDetectada && p.num!=null && mapaClave[p.num]){
+          p.correcta = ['a','b','c','d'].indexOf(mapaClave[p.num]);
+          p.rptaDetectada = true;
+        }
+      });
+    }
+  }
+
+  // Nunca se adivina una respuesta: si no se pudo determinar con certeza
+  // cuál opción es la correcta, esa pregunta se descarta en vez de
+  // marcarla por defecto (evita cargar una respuesta incorrecta sin avisar).
+  const reconocidas = preguntas.filter(p=>p.rptaDetectada);
+  const descartadas = preguntas.length - reconocidas.length;
+
+  const resultado = reconocidas.slice(0,6);
+  resultado.descartadasPorFaltaDeRespuesta = descartadas;
+  return resultado;
 }
 
 document.getElementById('pdfPreguntas').addEventListener('change', async (e)=>{
@@ -1361,27 +1409,202 @@ document.getElementById('pdfPreguntas').addEventListener('change', async (e)=>{
     }
 
     const preguntasDetectadas = parsePDFTextoAPreguntas(textoCompleto);
+    const descartadas = preguntasDetectadas.descartadasPorFaltaDeRespuesta || 0;
 
     if(preguntasDetectadas.length === 0){
-      statusBox.innerHTML = `<span style="color:var(--danger,#b3261e);">No se pudo reconocer ninguna pregunta. Verifica que cada pregunta esté numerada (1. / 1) / 1-) y tenga 4 opciones marcadas a) b) c) d). Si el PDF es una imagen escaneada, no tiene texto seleccionable y no se puede leer así. Revisa el PDF o escribe las preguntas manualmente abajo.</span>`;
+      statusBox.innerHTML = `<span style="color:var(--danger,#b3261e);">No se pudo reconocer ninguna pregunta con su respuesta correcta. Verifica que cada pregunta esté numerada (1. / 1) / Pregunta 1 / N° 1), tenga 4 opciones (a/b/c/d) y que la respuesta correcta esté indicada de alguna forma (Rpta:, Respuesta:, Clave:, un casillero marcado, o una "Clave de respuestas" al final del documento). Si el PDF es una imagen escaneada, no tiene texto seleccionable y no se puede leer así. Revisa el PDF o escribe las preguntas manualmente abajo.</span>`;
       return;
     }
 
-    const sinRpta = preguntasDetectadas.filter(q=>!q.rptaDetectada).length;
-
     // Las preguntas se cargan tal cual se detectaron en el PDF, sin alterar
     // el orden de las opciones a/b/c/d ni la letra marcada como correcta.
+    // Nunca se adivina una respuesta: si no se pudo determinar con certeza,
+    // esa pregunta se descarta en vez de importarla con una respuesta incierta.
     bancoActual = preguntasDetectadas;
     ocultarComenzar();
     renderBanco();
 
-    statusBox.innerHTML = `<span style="color:var(--good,#2e7d32);">✔ Se importaron ${preguntasDetectadas.length} pregunta(s), tal como aparecen en el PDF (mismo orden de opciones a/b/c/d).</span>
-      ${sinRpta>0 ? `<br><span style="color:var(--danger,#b3261e);">⚠ En ${sinRpta} pregunta(s) no se detectó la línea "Rpta:" — revisa cuál opción quedó marcada como correcta antes de guardar.</span>` : ''}
+    statusBox.innerHTML = `<span style="color:var(--good,#2e7d32);">✔ Se importaron ${preguntasDetectadas.length} pregunta(s), tal como aparecen en el PDF (mismo orden de opciones a/b/c/d y misma respuesta correcta marcada).</span>
+      ${descartadas>0 ? `<br><span style="color:var(--danger,#b3261e);">⚠ Se descartaron ${descartadas} pregunta(s) del PDF porque no se pudo determinar con certeza cuál era la respuesta correcta (no se detectó "Rpta:", casillero marcado, ni una clave de respuestas). Agrégalas manualmente si las necesitas.</span>` : ''}
       <br>Revisa el texto y las opciones abajo antes de guardar; el reconocimiento es automático por patrones, no por inteligencia artificial, así que puede tener errores.`;
 
   }catch(err){
     console.error(err);
     statusBox.innerHTML = `<span style="color:var(--danger,#b3261e);">No se pudo leer el PDF (¿está protegido o es una imagen escaneada sin texto?). Escribe las preguntas manualmente abajo.</span>`;
+  }
+});
+
+/* ============================================================
+   IMPORTAR HISTORIAL DESDE UN PDF DE INFORME ANTERIOR
+   Para reconstruir el registro cuando se perdió (por ejemplo, sin
+   copia de seguridad). Solo recupera el resultado de cada estudiante
+   (nivel, aciertos, conclusión) — las 6 preguntas originales de ese
+   día NO se pueden recuperar, el PDF no las incluye.
+============================================================ */
+const MESES_ES = {enero:0,febrero:1,marzo:2,abril:3,mayo:4,junio:5,julio:6,agosto:7,septiembre:8,setiembre:8,octubre:9,noviembre:10,diciembre:11};
+function parseFechaLargaEs(txt){
+  // admite "lunes, 31 de agosto de 2026" -> "2026-08-31"
+  const m = txt.match(/(\d{1,2})\s*de\s*([a-zA-Zá-úñ]+)\s*de\s*(\d{4})/i);
+  if(!m) return null;
+  const dia = Number(m[1]);
+  const mes = MESES_ES[m[2].toLowerCase()];
+  const anio = Number(m[3]);
+  if(mes===undefined) return null;
+  return `${anio}-${String(mes+1).padStart(2,'0')}-${String(dia).padStart(2,'0')}`;
+}
+
+function parsePDFInformeASesion(texto){
+  const get = (re) => { const m = texto.match(re); return m ? m[1].trim() : ''; };
+
+  const fechaTxt = get(/Fecha de evaluación \/ asistencia:\s*(.+)/);
+  const grado = get(/Grado\/Sección:\s*(.+?)\s*—\s*Sección/);
+  const area = get(/Área:\s*(.+)/);
+  const competencia = get(/Competencia:\s*(.+)/);
+  const tema = get(/Tema de la clase:\s*(.+)/);
+
+  const mEstandar = texto.match(/Estándar de aprendizaje \(MINEDU\):\s*([\s\S]*?)\s*Fuente:/);
+  const estandar = mEstandar ? mEstandar[1].replace(/\s+/g,' ').trim() : '';
+  const fuente = get(/Fuente:\s*(.+)/);
+
+  const mCrit = texto.match(/C:\s*menor a\s*(\d+)%.*?A:\s*(\d+)%/s);
+  const thresholds = mCrit ? { B: Number(mCrit[1]), A: Number(mCrit[2]) } : { B:50, A:75 };
+
+  const mMotivo = texto.match(/Motivo de selección de estudiantes:\s*([\s\S]*?)\s*Resultados/);
+  const seleccion_motivo = mMotivo ? mMotivo[1].replace(/\s+/g,' ').trim() : '';
+
+  // --- Ausentes ---
+  const ausentesNombres = [];
+  const mAus = texto.match(/Estudiantes ausentes[\s\S]*?\n([\s\S]*?)(?:\nProf\.|$)/);
+  if(mAus){
+    mAus[1].split('\n').forEach(l=>{
+      const t = l.replace(/^[•\-\*]\s*/,'').trim();
+      if(t) ausentesNombres.push(t);
+    });
+  }
+
+  // --- Resultados ---
+  const inicioRes = texto.indexOf('Resultados');
+  const finAus = texto.indexOf('Estudiantes ausentes');
+  const finProf = texto.indexOf('Prof.');
+  const finRes = finAus >= 0 ? finAus : (finProf >= 0 ? finProf : texto.length);
+  const bloqueResultados = inicioRes >= 0 ? texto.slice(inicioRes + 'Resultados'.length, finRes) : '';
+
+  const reFila = /([A-ZÁÉÍÓÚÑ][^\n—]+?)\s*—\s*Nivel\s+(C|B|A|AD)\s*\((\d+)\/(\d+),\s*(\d+)%\)\n([\s\S]*?)(?=\n[A-ZÁÉÍÓÚÑ][^\n—]+?\s*—\s*Nivel|$)/g;
+  const evaluadosCrudos = [...bloqueResultados.matchAll(reFila)].map(f=>({
+    nombre: f[1].trim(), nivel: f[2], correctas: Number(f[3]), total: Number(f[4]), porcentaje: Number(f[5]),
+    conclusion: f[6].replace(/\s+/g,' ').trim()
+  }));
+
+  // REGLA DE SEGURIDAD: si un estudiante aparece a la vez en "Resultados"
+  // y en "Estudiantes ausentes" del mismo informe, es el error conocido
+  // (se le evaluó por error en vez de marcarlo ausente). Se descarta su
+  // resultado y se respeta que estuvo ausente ese día.
+  const ausentesSet = new Set(ausentesNombres.map(n=>n.toLowerCase()));
+  const evaluados = evaluadosCrudos.filter(e => !ausentesSet.has(e.nombre.toLowerCase()));
+  const descartadosPorContradiccion = evaluadosCrudos.filter(e => ausentesSet.has(e.nombre.toLowerCase())).map(e=>e.nombre);
+
+  return { fechaTxt, grado, area, competencia, tema, estandar, fuente, thresholds, seleccion_motivo, evaluados, ausentes: ausentesNombres, descartadosPorContradiccion };
+}
+
+document.getElementById('inputImportarInformePDF').addEventListener('change', async (e)=>{
+  const files = Array.from(e.target.files || []);
+  const statusBox = document.getElementById('importarInformeStatus');
+  if(files.length === 0) return;
+
+  if(!window.pdfjsLib){
+    statusBox.innerHTML = '<span style="color:var(--danger,#b3261e);">No se pudo cargar el lector de PDF (requiere internet la primera vez). Revisa tu conexión e inténtalo de nuevo.</span>';
+    return;
+  }
+
+  statusBox.innerHTML = `<span class="spinner"></span> Leyendo ${files.length} PDF(s)…`;
+
+  let sesionesImportadas = 0, estudiantesImportados = 0, estudiantesNoReconocidos = new Set(), contradiccionesTotal = [];
+
+  for(const file of files){
+    try{
+      const buffer = await file.arrayBuffer();
+      const pdf = await pdfjsLib.getDocument({data: buffer}).promise;
+      let textoCompleto = '';
+      for(let p=1; p<=pdf.numPages; p++){
+        const page = await pdf.getPage(p);
+        const content = await page.getTextContent();
+        const lineasPagina = {};
+        content.items.forEach(item=>{
+          const y = Math.round(item.transform[5]);
+          if(!lineasPagina[y]) lineasPagina[y] = [];
+          lineasPagina[y].push(item.str);
+        });
+        const ys = Object.keys(lineasPagina).map(Number).sort((a,b)=>b-a);
+        ys.forEach(y=>{ textoCompleto += lineasPagina[y].join(' ') + '\n'; });
+      }
+
+      const r = parsePDFInformeASesion(textoCompleto);
+      if(!r.area || !r.competencia || (r.evaluados.length===0 && r.ausentes.length===0)){
+        continue; // no parece un informe de esta app; se omite en silencio
+      }
+
+      const fechaISO = parseFechaLargaEs(r.fechaTxt);
+      const estOficial = MINEDU_ESTANDARES[r.competencia] || {};
+      const miTemaKey = temaKey(r.area, r.competencia, r.tema);
+
+      const evaluadosConId = [];
+      r.evaluados.forEach(ev=>{
+        const st = ROSTER.find(s => s.name.toLowerCase() === ev.nombre.toLowerCase());
+        if(!st){ estudiantesNoReconocidos.add(ev.nombre); return; }
+        let bono = null;
+        if(ev.porcentaje === 100) bono = (ev.nivel === 'AD');
+        evaluadosConId.push({
+          studentId: st.id, nombre: st.name, correctas: ev.correctas, total: ev.total,
+          porcentaje: ev.porcentaje, nivel: ev.nivel, bono, conclusion: ev.conclusion
+        });
+      });
+
+      state.sessions.push({
+        id: 'SES'+Date.now()+'_'+Math.floor(Math.random()*100000),
+        fecha: fechaISO ? new Date(fechaISO+'T12:00:00').toISOString() : new Date().toISOString(),
+        fechaSesion: fechaISO || computeLogicalDate(),
+        area: r.area, grado: r.grado, competencia: r.competencia, tema: r.tema,
+        capacidades: estOficial.capacidades || [],
+        estandar: r.estandar || estOficial.estandar || '',
+        fuente: r.fuente || estOficial.fuente || '',
+        rubrica: estOficial.rubrica || {},
+        thresholds: r.thresholds,
+        seleccion_motivo: r.seleccion_motivo,
+        preguntas: [],
+        evaluados: evaluadosConId,
+        importadaDesdePDF: true
+      });
+      sesionesImportadas++;
+      estudiantesImportados += evaluadosConId.length;
+
+      // Los ausentes de ese informe (y los descartados por contradicción)
+      // quedan pendientes de ESE mismo tema, igual que si hubiera pasado hoy.
+      r.ausentes.forEach(nombreAusente=>{
+        const st = ROSTER.find(s => s.name.toLowerCase() === nombreAusente.toLowerCase());
+        if(!st){ estudiantesNoReconocidos.add(nombreAusente); return; }
+        if(!state.pending.some(p=>p.id===st.id && p.temaKey===miTemaKey)){
+          state.pending.push({ id: st.id, temaKey: miTemaKey, area: r.area, competencia: r.competencia, tema: r.tema });
+        }
+      });
+      contradiccionesTotal = contradiccionesTotal.concat(r.descartadosPorContradiccion);
+
+    }catch(err){
+      console.error('Error leyendo', file.name, err);
+    }
+  }
+
+  await saveSessions();
+  await savePending();
+  renderRegistro();
+  renderPending();
+  updateAttendanceSummary();
+
+  if(sesionesImportadas === 0){
+    statusBox.innerHTML = `<span style="color:var(--danger,#b3261e);">No se pudo reconocer ningún informe válido en ${files.length} PDF(s). Verifica que sean los PDF de "Informe de Evaluación Formativa" generados por esta misma app, con texto seleccionable (no escaneados).</span>`;
+  } else {
+    statusBox.innerHTML = `<span style="color:var(--good,#2e7d32);">✔ Se importaron ${sesionesImportadas} evaluación(es) al registro, con ${estudiantesImportados} resultado(s) de estudiantes en total.</span>
+      ${contradiccionesTotal.length>0 ? `<br><span style="color:var(--danger,#b3261e);">⚠ Se descartó el resultado de ${contradiccionesTotal.length} estudiante(s) por aparecer también como ausente(s) en el mismo informe (error conocido de evaluar por error a quien faltó): ${contradiccionesTotal.join(', ')}. Quedan pendientes de ese tema en vez de con una nota falsa.</span>` : ''}
+      ${estudiantesNoReconocidos.size>0 ? `<br><span style="color:var(--danger,#b3261e);">⚠ No se reconoció a ${estudiantesNoReconocidos.size} nombre(s) en tu lista actual de estudiantes: ${[...estudiantesNoReconocidos].join(', ')}. Revísalos manualmente.</span>` : ''}`;
   }
 });
 
@@ -1445,7 +1668,6 @@ function renderListaExamenes(box, items, {compact}={}){
       if(d.competencia) document.getElementById('competencia').value = d.competencia;
       if(d.grado) document.getElementById('grado').value = d.grado;
       document.getElementById('tema').value = d.tema || '';
-      document.getElementById('micropractica').value = d.micropractica || '';
       if(d.thresholds){
         document.getElementById('thB').value = d.thresholds.B ?? 50;
         document.getElementById('thA').value = d.thresholds.A ?? 75;
@@ -1514,7 +1736,6 @@ document.getElementById('btnGuardarBanco').addEventListener('click', async ()=>{
     grado: document.getElementById('grado').value,
     competencia: document.getElementById('competencia').value.trim(),
     tema: document.getElementById('tema').value.trim(),
-    micropractica: document.getElementById('micropractica').value.trim(),
     thresholds: {
       B: Number(document.getElementById('thB').value),
       A: Number(document.getElementById('thA').value)
@@ -1561,7 +1782,6 @@ document.getElementById('btnComenzarEvaluacion').addEventListener('click', ()=>{
       A: Number(document.getElementById('thA').value)
     },
     preguntas: bancoActual.slice(0, 6),
-    micropractica: document.getElementById('micropractica').value.trim(),
     evaluados: []
   };
 
@@ -1619,16 +1839,28 @@ document.getElementById('btnDefinirEvaluados').addEventListener('click', definir
 
 function definirEvaluados(){
   if(!state.currentSession){ return; }
-  // Se evalúa a TODOS los estudiantes presentes, en orden de lista (N.° 1 al 28).
-  const absentIds = ROSTER.filter(s=>!state.attendance[s.id]).map(s=>s.id);
-  const presentIds = ROSTER.filter(s=>state.attendance[s.id]).map(s=>s.id); // ROSTER ya está ordenado por número de lista
+  const s = state.currentSession;
+  const miTemaKey = temaKey(s.area, s.competencia, s.tema);
 
-  // Los ausentes de hoy quedan con evaluación pendiente para cuando regresen
-  absentIds.forEach(id=>{ if(!state.pending.includes(id)) state.pending.push(id); });
+  // Se evalúa a TODOS los estudiantes presentes, en orden de lista (N.° 1 al total actual).
+  const absentIds = ROSTER.filter(st=>!state.attendance[st.id]).map(st=>st.id);
+  const presentIds = ROSTER.filter(st=>state.attendance[st.id]).map(st=>st.id); // ROSTER ya está ordenado por número de lista
+
+  // Los ausentes de hoy quedan con evaluación pendiente, pero SOLO para
+  // este tema/competencia específico — no es un pendiente genérico. Así,
+  // si más adelante se genera una evaluación de OTRO tema o área, este
+  // estudiante no aparece ahí como pendiente sin motivo: su pendiente
+  // solo resurge cuando se vuelva a abrir/tomar ESTE MISMO tema.
+  absentIds.forEach(id=>{
+    const yaPendiente = state.pending.some(p => p.id===id && p.temaKey===miTemaKey);
+    if(!yaPendiente){
+      state.pending.push({ id, temaKey: miTemaKey, area: s.area, competencia: s.competencia, tema: s.tema });
+    }
+  });
 
   state.currentSession.seleccion_motivo = absentIds.length > 0
-    ? `Se llama en orden de lista (N.° 1 al 28) a los ${presentIds.length} estudiantes presentes hoy. Los ${absentIds.length} ausente(s) quedan con evaluación pendiente para su próxima asistencia.`
-    : `Se llama en orden de lista (N.° 1 al 28) a los ${presentIds.length} estudiantes: asistencia completa hoy.`;
+    ? `Se llama en orden de lista (N.° 1 al ${ROSTER.length}) a los ${presentIds.length} estudiantes presentes hoy. Los ${absentIds.length} ausente(s) quedan con evaluación pendiente de este tema para su próxima asistencia.`
+    : `Se llama en orden de lista (N.° 1 al ${ROSTER.length}) a los ${presentIds.length} estudiantes: asistencia completa hoy.`;
   state.currentSession.seleccionados = presentIds;
   savePending();
 
@@ -1662,13 +1894,6 @@ let quizBonusCorrect = null; // null = no aplica todavía, true/false tras respo
 
 function renderQueueUI(){
   const s = state.currentSession;
-  const microCard = document.getElementById('microCard');
-  if(s.micropractica){
-    document.getElementById('microCardText').textContent = s.micropractica;
-    microCard.style.display = 'block';
-  } else {
-    microCard.style.display = 'none';
-  }
   document.getElementById('selectionReason').textContent = s.seleccion_motivo || '';
   const queueList = document.getElementById('queueList');
   queueList.innerHTML = s.seleccionados.map(id=>{
@@ -1721,6 +1946,33 @@ function saltarEstudianteActual(){
   startNextStudent();
 }
 
+// Corrige el error de haber marcado como "presente" a un estudiante que
+// en realidad faltó. A diferencia de "Saltar por ahora", esto lo QUITA
+// definitivamente de la evaluación de hoy (no vuelve a aparecer en la
+// cola), corrige su asistencia a "ausente", y lo deja con evaluación
+// pendiente para su próxima asistencia — igual que a cualquier otro
+// ausente del día. Así la sesión de hoy puede cerrarse sin error aunque
+// ese estudiante nunca haya respondido nada.
+function corregirAusenciaEstudianteActual(){
+  const s = state.currentSession;
+  const id = s.seleccionados[quizQueueIndex];
+  const student = ROSTER.find(r=>r.id===id);
+  if(!student) return;
+  if(!confirm(`¿Confirmas que ${student.name} en realidad FALTÓ hoy?\n\nSe le quitará de la evaluación de hoy, se corregirá su asistencia a "ausente", y quedará pendiente para su próxima asistencia — igual que cualquier otro ausente. Esto no afecta a ningún otro estudiante.`)) return;
+
+  s.seleccionados.splice(quizQueueIndex, 1);
+  state.attendance[id] = false;
+  const miTemaKeyCorr = temaKey(s.area, s.competencia, s.tema);
+  if(!state.pending.some(p => p.id===id && p.temaKey===miTemaKeyCorr)){
+    state.pending.push({ id, temaKey: miTemaKeyCorr, area: s.area, competencia: s.competencia, tema: s.tema });
+  }
+  savePending();
+  renderRoster();
+  updateAttendanceSummary();
+  renderQueueUI();
+  startNextStudent();
+}
+
 function renderQuizQuestion(){
   const s = state.currentSession;
   const studentId = s.seleccionados[quizQueueIndex];
@@ -1740,7 +1992,10 @@ function renderQuizQuestion(){
         <div class="quiz-opts" id="quizOpts">
           ${q.opciones.map((op,i)=>`<button class="quiz-opt" data-i="${i}"><span class="quiz-opt-letter">${String.fromCharCode(97+i)}</span><span class="quiz-opt-text">${op}</span></button>`).join('')}
         </div>
-        ${hayMasEstudiantes ? `<button type="button" class="btn outline small" id="btnSaltarEstudiante" style="margin-top:10px;">⏭ Saltar por ahora (retomar al final)</button>` : ''}
+        <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:10px;">
+          ${hayMasEstudiantes ? `<button type="button" class="btn outline small" id="btnSaltarEstudiante">⏭ Saltar por ahora (retomar al final)</button>` : ''}
+          <button type="button" class="btn outline small" id="btnCorregirAusencia" style="color:var(--danger,#b3261e);border-color:var(--danger,#b3261e);">❌ En realidad faltó hoy (quitar de esta evaluación)</button>
+        </div>
       </div>
     </div>
   `;
@@ -1749,6 +2004,7 @@ function renderQuizQuestion(){
   });
   const btnSaltar = document.getElementById('btnSaltarEstudiante');
   if(btnSaltar) btnSaltar.addEventListener('click', saltarEstudianteActual);
+  document.getElementById('btnCorregirAusencia').addEventListener('click', corregirAusenciaEstudianteActual);
 }
 
 function renderBonusQuestion(){
@@ -1849,8 +2105,11 @@ function finishStudent(){
     porcentaje: pct, nivel, bono: pct===100 ? quizBonusCorrect : null, conclusion
   });
 
-  // remove from pending queue, since evaluated now
-  state.pending = state.pending.filter(id => id !== studentId);
+  // Se quita de la cola de pendientes SOLO el pendiente de este mismo
+  // tema/competencia (si lo tenía) — no se tocan sus pendientes de
+  // otros temas, que siguen intactos hasta que se retomen ellos mismos.
+  const miTemaKeyEval = temaKey(s.area, s.competencia, s.tema);
+  state.pending = state.pending.filter(p => !(p.id === studentId && p.temaKey === miTemaKeyEval));
   savePending();
 
   const area = document.getElementById('quizArea');
@@ -1951,14 +2210,6 @@ function generarPDF(s){
     `C: menor a ${s.thresholds.B}%  |  B: ${s.thresholds.B}%–${s.thresholds.A-1}%  |  A: ${s.thresholds.A}%–100%  |  AD: 100% + acierta la 6.ª pregunta adicional (bono)`, 180);
   doc.text(criterioLines, margin, y); y += criterioLines.length*4.5 + 4;
 
-  if(s.micropractica){
-    doc.setFont('helvetica','bold'); doc.setFontSize(11); doc.text('Micropráctica diaria de refuerzo (neuroaprendizaje):', margin, y); y+=5;
-    doc.setFont('helvetica','normal'); doc.setFontSize(9);
-    const microLines = doc.splitTextToSize(s.micropractica, 180);
-    doc.text(microLines, margin, y); y += microLines.length*4.5 + 6;
-    doc.setFontSize(10);
-  }
-
   doc.setFont('helvetica','bold'); doc.setFontSize(11); doc.text('Motivo de selección de estudiantes:', margin, y); y+=5;
   doc.setFont('helvetica','normal'); doc.setFontSize(9);
   const motivoLines = doc.splitTextToSize(s.seleccion_motivo || '', 180);
@@ -1999,9 +2250,17 @@ function renderPending(){
     box.innerHTML = '<div class="empty-state">No hay estudiantes con evaluación pendiente. 🎉</div>';
     return;
   }
-  box.innerHTML = `<div class="roster-list">` + state.pending.map(id=>{
+  // Agrupa por estudiante: un mismo estudiante puede deber más de un tema.
+  const porEstudiante = {};
+  state.pending.forEach(p=>{
+    if(!porEstudiante[p.id]) porEstudiante[p.id] = [];
+    porEstudiante[p.id].push(p);
+  });
+  box.innerHTML = `<div class="roster-list">` + Object.keys(porEstudiante).map(id=>{
     const st = ROSTER.find(r=>r.id===id);
-    return `<div class="roster-row"><span class="name">${st.name}</span><span class="pending-tag">pendiente</span></div>`;
+    if(!st) return '';
+    const temas = porEstudiante[id].map(p => `${p.area}${p.tema ? ' · '+p.tema : ''}`).join(' · y también · ');
+    return `<div class="roster-row"><span class="name">${st.name}<br><span style="font-size:12px;color:var(--ink-soft);font-weight:400;">Debe: ${temas}</span></span><span class="pending-tag">pendiente</span></div>`;
   }).join('') + `</div>`;
 }
 
@@ -2021,6 +2280,7 @@ function renderRegistro(){
         <td>${e.nombre}</td>
         <td><span class="badge ${e.nivel}">${e.nivel}</span></td>
         <td>${e.correctas}/${e.total} (${e.porcentaje}%)</td>
+        <td><button type="button" class="btn outline small" data-quitar-res="${s.id}|${e.studentId}" title="Quitar solo este resultado, por ejemplo si fue un error al calificar" style="color:var(--danger,#b3261e);border-color:var(--danger,#b3261e);padding:2px 8px;">🗑️</button></td>
       </tr>
     `).join('');
     return `
@@ -2029,9 +2289,8 @@ function renderRegistro(){
           <span class="title">${s.area} — ${s.competencia}${s.tema ? ' · ' + s.tema : ''}</span>
           <span class="date">${fecha}</span>
         </div>
-        ${s.micropractica ? `<p class="hint" style="margin:4px 0 8px;">⚡ Micropráctica: ${s.micropractica}</p>` : ''}
         <table class="reg">
-          <thead><tr><th>Estudiante</th><th>Nivel</th><th>Resultado</th></tr></thead>
+          <thead><tr><th>Estudiante</th><th>Nivel</th><th>Resultado</th><th></th></tr></thead>
           <tbody>${rows}</tbody>
         </table>
         <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;">
@@ -2048,6 +2307,41 @@ function renderRegistro(){
   box.querySelectorAll('[data-retake-ses]').forEach(btn=>{
     btn.addEventListener('click', ()=>volverATomarSesion(btn.dataset.retakeSes));
   });
+  box.querySelectorAll('[data-quitar-res]').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const [sesionId, studentId] = btn.dataset.quitarRes.split('|');
+      quitarResultadoIndividual(sesionId, studentId);
+    });
+  });
+}
+
+// Quita el resultado de UN SOLO estudiante dentro de una evaluación ya
+// guardada — por ejemplo, si por error se le calificó sin haber sido
+// evaluado realmente. No afecta a los demás estudiantes de esa misma
+// sesión. El estudiante vuelve a quedar pendiente de ESE tema, para
+// evaluarlo de verdad la próxima vez.
+async function quitarResultadoIndividual(sesionId, studentId){
+  const s = state.sessions.find(x=>x.id===sesionId);
+  if(!s) return;
+  const ev = s.evaluados.find(e=>e.studentId===studentId);
+  if(!ev) return;
+  if(!confirm(`¿Quitar el resultado de "${ev.nombre}" en "${s.area} — ${s.competencia}${s.tema?' · '+s.tema:''}"?\n\nEsto NO afecta a los demás estudiantes de esta sesión. ${ev.nombre} volverá a quedar pendiente de este tema para evaluarlo correctamente la próxima vez.`)) return;
+
+  s.evaluados = s.evaluados.filter(e=>e.studentId!==studentId);
+  if(s.evaluados.length === 0){
+    // Si era el único resultado de la sesión, ya no queda nada que registrar
+    state.sessions = state.sessions.filter(x=>x.id!==sesionId);
+  }
+  await saveSessions();
+
+  const miTemaKey = temaKey(s.area, s.competencia, s.tema);
+  if(!state.pending.some(p=>p.id===studentId && p.temaKey===miTemaKey)){
+    state.pending.push({ id: studentId, temaKey: miTemaKey, area: s.area, competencia: s.competencia, tema: s.tema });
+  }
+  await savePending();
+
+  renderRegistro();
+  setStatus(`Se quitó el resultado de ${ev.nombre}. Queda pendiente de "${s.area}${s.tema?' · '+s.tema:''}" para su próxima evaluación real.`, false);
 }
 
 // Elimina del registro una sesión guardada por error (no toca al banco de
@@ -2076,7 +2370,6 @@ function volverATomarSesion(sesionId){
   document.getElementById('competencia').value = s.competencia;
   document.getElementById('grado').value = s.grado || '5.° grado de primaria (V ciclo)';
   document.getElementById('tema').value = s.tema || '';
-  document.getElementById('micropractica').value = s.micropractica || '';
   document.getElementById('thB').value = (s.thresholds && s.thresholds.B) ?? 50;
   document.getElementById('thA').value = (s.thresholds && s.thresholds.A) ?? 75;
 

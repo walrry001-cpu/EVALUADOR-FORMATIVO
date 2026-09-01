@@ -11,7 +11,7 @@
 // copia vieja guardada en el celular. Si no hay internet, se usa la
 // última copia guardada para que la app siga funcionando offline.
 
-const CACHE_NAME = 'evaluador-formativo-v2';
+const CACHE_NAME = 'evaluador-formativo-v3';
 const APP_SHELL = [
   './',
   './index.html',
