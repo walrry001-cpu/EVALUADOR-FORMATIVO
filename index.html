@@ -508,9 +508,19 @@
       </div>
 
       <div style="margin:10px 0;padding:12px;border:1px dashed var(--line);border-radius:10px;">
-        <label>📄 Importar preguntas desde PDF a la fila elegida arriba (exactamente 6 — 5 base + 1 adicional al final — pregunta numerada, 4 opciones a) b) c) d), e idealmente una línea "Rpta: b")</label>
-        <input type="file" id="pdfPreguntas" accept="application/pdf">
-        <div id="pdfImportStatus" style="margin-top:8px;font-size:12.5px;color:var(--ink-soft);"></div>
+        <label style="margin-top:0;">📄 Importar preguntas desde PDF — cada fila tiene su propio selector (exactamente 6 preguntas: 5 base + 1 adicional al final; numeradas, 4 opciones a) b) c) d), e idealmente una línea "Rpta: b")</label>
+
+        <div style="margin-top:10px;padding:10px;border:1px solid var(--line);border-radius:8px;">
+          <b>PDF de la Fila A</b><br>
+          <input type="file" id="pdfPreguntasA" accept="application/pdf" style="margin-top:6px;">
+          <div id="pdfImportStatusA" style="margin-top:8px;font-size:12.5px;color:var(--ink-soft);"></div>
+        </div>
+
+        <div style="margin-top:10px;padding:10px;border:1px solid var(--line);border-radius:8px;">
+          <b>PDF de la Fila B</b><br>
+          <input type="file" id="pdfPreguntasB" accept="application/pdf" style="margin-top:6px;">
+          <div id="pdfImportStatusB" style="margin-top:8px;font-size:12.5px;color:var(--ink-soft);"></div>
+        </div>
       </div>
 
       <div style="margin:10px 0;padding:12px;border:1px dashed var(--line);border-radius:10px;">
@@ -1154,7 +1164,7 @@ async function prepararSesion(){
     A: (guardado && guardado.preguntas) ? guardado.preguntas : [],
     B: (guardado && guardado.preguntasB) ? guardado.preguntasB : []
   };
-  filaEditando = 'A'; bancoActual = bancos.A;
+  filaEditando = 'A'; bancoActual = bancos.A; limpiarEstadosPDF();
   fotoTemaBase64 = (guardado && guardado.foto) ? guardado.foto : null;
 
   renderFotoPreview();
@@ -1362,9 +1372,19 @@ function parsePDFTextoAPreguntas(texto){
   return preguntas.slice(0,6);
 }
 
-document.getElementById('pdfPreguntas').addEventListener('change', async (e)=>{
-  const file = e.target.files[0];
-  const statusBox = document.getElementById('pdfImportStatus');
+function limpiarEstadosPDF(){
+  ['A','B'].forEach(f=>{
+    const st = document.getElementById('pdfImportStatus'+f);
+    if(st) st.innerHTML = '';
+    const inp = document.getElementById('pdfPreguntas'+f);
+    if(inp) inp.value = '';
+  });
+}
+
+// Importa un PDF directamente a la fila indicada (A o B), sin depender de
+// qué fila esté activa en el editor. Cada fila tiene su selector y su estado.
+async function importarPDFaFila(file, fila){
+  const statusBox = document.getElementById('pdfImportStatus'+fila);
   if(!file) return;
 
   if(!window.pdfjsLib){
@@ -1372,7 +1392,7 @@ document.getElementById('pdfPreguntas').addEventListener('change', async (e)=>{
     return;
   }
 
-  statusBox.innerHTML = '<span class="spinner"></span> Leyendo el PDF…';
+  statusBox.innerHTML = '<span class="spinner"></span> Leyendo el PDF de la Fila '+fila+'…';
 
   try{
     const buffer = await file.arrayBuffer();
@@ -1394,7 +1414,7 @@ document.getElementById('pdfPreguntas').addEventListener('change', async (e)=>{
     const preguntasDetectadas = parsePDFTextoAPreguntas(textoCompleto);
 
     if(preguntasDetectadas.length === 0){
-      statusBox.innerHTML = `<span style="color:var(--danger,#b3261e);">No se pudo reconocer ninguna pregunta. Verifica que cada pregunta esté numerada (1. / 1) / 1-) y tenga 4 opciones marcadas a) b) c) d). Si el PDF es una imagen escaneada, no tiene texto seleccionable y no se puede leer así. Revisa el PDF o escribe las preguntas manualmente abajo.</span>`;
+      statusBox.innerHTML = `<span style="color:var(--danger,#b3261e);">Fila ${fila}: no se pudo reconocer ninguna pregunta. Verifica que cada pregunta esté numerada (1. / 1) / 1-) y tenga 4 opciones marcadas a) b) c) d). Si el PDF es una imagen escaneada, no tiene texto seleccionable y no se puede leer así. Revisa el PDF o escribe las preguntas manualmente abajo.</span>`;
       return;
     }
 
@@ -1402,21 +1422,32 @@ document.getElementById('pdfPreguntas').addEventListener('change', async (e)=>{
     const faltan = preguntasDetectadas.length < 6
       ? `<br><span style="color:var(--danger,#b3261e);">⚠ Se esperaban 6 preguntas y solo se reconocieron ${preguntasDetectadas.length}. Completa las que falten a mano con "+ Agregar pregunta".</span>` : '';
 
-    // Las preguntas se cargan tal cual se detectaron en el PDF, sin alterar
-    // el orden de las opciones a/b/c/d ni la letra marcada como correcta.
-    setBanco(preguntasDetectadas);
+    // Guarda SOLO en la fila indicada; la otra fila no se toca.
+    bancos[fila] = preguntasDetectadas;
+    // Muestra en el editor la fila que se acaba de importar
+    filaEditando = fila;
+    bancoActual = bancos[fila];
     ocultarComenzar();
     renderBanco();
 
-    statusBox.innerHTML = `<span style="color:var(--good,#2e7d32);">✔ Fila ${filaEditando}: se importaron ${preguntasDetectadas.length} pregunta(s), tal como aparecen en el PDF (mismo orden de opciones a/b/c/d).</span>
+    statusBox.innerHTML = `<span style="color:var(--good,#2e7d32);">✔ Fila ${fila}: se importaron ${preguntasDetectadas.length} pregunta(s) de "${escapeAttr(file.name)}", tal como aparecen en el PDF (mismo orden de opciones a/b/c/d).</span>
       ${faltan}
       ${sinRpta>0 ? `<br><span style="color:var(--danger,#b3261e);">⚠ En ${sinRpta} pregunta(s) no se detectó la línea "Rpta:" — revisa cuál opción quedó marcada como correcta antes de guardar.</span>` : ''}
       <br>Revisa el texto y las opciones abajo antes de guardar; el reconocimiento es automático por patrones, no por inteligencia artificial, así que puede tener errores.`;
 
   }catch(err){
     console.error(err);
-    statusBox.innerHTML = `<span style="color:var(--danger,#b3261e);">No se pudo leer el PDF (¿está protegido o es una imagen escaneada sin texto?). Escribe las preguntas manualmente abajo.</span>`;
+    statusBox.innerHTML = `<span style="color:var(--danger,#b3261e);">Fila ${fila}: no se pudo leer el PDF (¿está protegido o es una imagen escaneada sin texto?). Escribe las preguntas manualmente abajo.</span>`;
   }
+}
+
+['A','B'].forEach(f=>{
+  const inp = document.getElementById('pdfPreguntas'+f);
+  inp.addEventListener('change', async (e)=>{
+    const file = e.target.files[0];
+    await importarPDFaFila(file, f);
+    e.target.value = ''; // permite volver a elegir el mismo archivo
+  });
 });
 
 /* ============================================================
@@ -1497,7 +1528,7 @@ function abrirExamenGuardado(it, box){
 
   temaKeyActual = it.key.replace(/^banco:/,'');
   bancos = { A: d.preguntas || [], B: d.preguntasB || [] };
-  filaEditando = 'A'; bancoActual = bancos.A;
+  filaEditando = 'A'; bancoActual = bancos.A; limpiarEstadosPDF();
   fotoTemaBase64 = d.foto || null;
   renderFotoPreview();
   renderBanco();
@@ -2326,7 +2357,7 @@ function volverATomarSesion(sesionId){
 
   temaKeyActual = temaKey(s.area, s.competencia, s.tema);
   bancos = { A: JSON.parse(JSON.stringify(s.preguntas || [])), B: JSON.parse(JSON.stringify(s.preguntasB || [])) };
-  filaEditando = 'A'; bancoActual = bancos.A;
+  filaEditando = 'A'; bancoActual = bancos.A; limpiarEstadosPDF();
   fotoTemaBase64 = null;
   renderFotoPreview();
   renderBanco();
