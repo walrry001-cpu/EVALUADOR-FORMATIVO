@@ -445,7 +445,7 @@
         </div>
         <div>
           <label>Grado / Ciclo</label>
-          <input type="text" id="grado" value="5.° grado de primaria (VI ciclo)">
+          <input type="text" id="grado" value="5.° grado de primaria (V ciclo)">
         </div>
       </div>
       <label>Competencia trabajada</label>
@@ -917,7 +917,7 @@ async function checkAndResetAttendanceForNewDay(){
 }
 
 /* ============================================================
-   ESTÁNDARES OFICIALES MINEDU — VI CICLO (5.°/6.° grado primaria)
+   ESTÁNDARES MINEDU — CICLO V (5.° y 6.° grado de primaria)
    Fuente: Currículo Nacional de la Educación Básica (CNEB) y
    Programa Curricular de Educación Primaria, MINEDU 2016.
    Cargados localmente para que la app funcione SIN internet.
@@ -925,115 +925,115 @@ async function checkAndResetAttendanceForNewDay(){
 const MINEDU_ESTANDARES = {
 "Resuelve problemas de cantidad": {
   estandar:"Traduce datos y relaciones de una situación a expresiones numéricas con las cuatro operaciones, fracciones, decimales, potencias y porcentajes; comprueba si su expresión representa las condiciones del problema y explica el valor posicional hasta millones.",
-  fuente:"CNEB - Programa Curricular de Educación Primaria, MINEDU 2016, VI ciclo",
+  fuente:"CNEB - Programa Curricular de Educación Primaria, MINEDU 2016, ciclo V (texto referencial: verificar con el documento oficial)",
   capacidades:["Traduce cantidades a expresiones numéricas","Comunica su comprensión sobre los números y las operaciones","Usa estrategias y procedimientos de estimación y cálculo","Argumenta afirmaciones sobre las relaciones numéricas y las operaciones"],
   rubrica:{C:"Necesita apoyo constante para relacionar los datos de un problema con una operación adecuada.",B:"Traduce problemas sencillos a operaciones básicas, con errores al usar fracciones, decimales o porcentajes.",A:"Traduce con autonomía situaciones cotidianas a expresiones numéricas con las cuatro operaciones, fracciones, decimales y porcentajes, y verifica sus resultados.",AD:"Además de resolver con autonomía, propone distintas formas de representar y comprobar resultados, argumentando con seguridad."}
 },
 "Resuelve problemas de regularidad, equivalencia y cambio": {
   estandar:"Establece relaciones entre datos, valores desconocidos y equivalencias, generaliza cómo continúa una regla de formación numérica o geométrica, y expresa su comprensión mediante lenguaje algebraico, ecuaciones y gráficos.",
-  fuente:"CNEB - Programa Curricular de Educación Primaria, MINEDU 2016, VI ciclo",
+  fuente:"CNEB - Programa Curricular de Educación Primaria, MINEDU 2016, ciclo V (texto referencial: verificar con el documento oficial)",
   capacidades:["Traduce datos y condiciones a expresiones algebraicas","Comunica su comprensión sobre las relaciones algebraicas","Usa estrategias y procedimientos para encontrar reglas generales","Argumenta afirmaciones sobre relaciones de cambio y equivalencia"],
   rubrica:{C:"Identifica patrones simples solo con ejemplos concretos y ayuda del docente.",B:"Reconoce y continúa patrones numéricos sencillos, con dificultad para generalizar con lenguaje algebraico.",A:"Identifica y generaliza patrones numéricos y geométricos, expresándolos mediante ecuaciones o gráficos con autonomía.",AD:"Generaliza patrones complejos, los representa de varias formas y argumenta la equivalencia entre expresiones algebraicas."}
 },
 "Resuelve problemas de forma, movimiento y localización": {
   estandar:"Describe las características y atributos medibles de objetos, los relaciona con formas bidimensionales y tridimensionales, resuelve problemas de perímetro, área y volumen, y describe la ubicación de objetos usando coordenadas, planos o mapas a escala.",
-  fuente:"CNEB - Programa Curricular de Educación Primaria, MINEDU 2016, VI ciclo",
+  fuente:"CNEB - Programa Curricular de Educación Primaria, MINEDU 2016, ciclo V (texto referencial: verificar con el documento oficial)",
   capacidades:["Modela objetos con formas geométricas y sus transformaciones","Comunica su comprensión sobre las formas y relaciones geométricas","Usa estrategias y procedimientos para medir y orientarse en el espacio","Argumenta afirmaciones sobre relaciones geométricas"],
   rubrica:{C:"Reconoce formas geométricas básicas pero requiere apoyo para calcular perímetro o área.",B:"Calcula perímetro y área de figuras simples y ubica objetos en un plano con ayuda ocasional.",A:"Resuelve con autonomía problemas de perímetro, área y volumen de figuras compuestas, y ubica objetos con coordenadas.",AD:"Resuelve problemas geométricos complejos, argumenta relaciones de semejanza y usa coordenadas y escalas con precisión."}
 },
 "Resuelve problemas de gestión de datos e incertidumbre": {
   estandar:"Recopila y organiza datos de una población en estudio, los representa mediante tablas y gráficos con medidas de tendencia central, y determina la probabilidad de sucesos en situaciones aleatorias sencillas.",
-  fuente:"CNEB - Programa Curricular de Educación Primaria, MINEDU 2016, VI ciclo",
+  fuente:"CNEB - Programa Curricular de Educación Primaria, MINEDU 2016, ciclo V (texto referencial: verificar con el documento oficial)",
   capacidades:["Representa datos con gráficos y medidas estadísticas","Comunica su comprensión de conceptos estadísticos y probabilísticos","Usa estrategias y procedimientos para recopilar y procesar datos","Sustenta conclusiones basadas en la información obtenida"],
   rubrica:{C:"Organiza datos simples en tablas solo con apoyo directo del docente.",B:"Recolecta y representa datos en gráficos de barras sencillos, con dificultad al calcular media o moda.",A:"Organiza, representa e interpreta datos en distintos gráficos y calcula medidas de tendencia central con autonomía.",AD:"Interpreta y compara conjuntos de datos, calcula probabilidades y argumenta conclusiones basadas en la información."}
 },
 "Se comunica oralmente en su lengua materna": {
   estandar:"Expresa sus ideas organizando el contenido según su propósito, adecúa su texto oral al oyente y contexto, usa vocabulario variado y recursos no verbales, y evalúa lo dicho por él y por otros.",
-  fuente:"CNEB - Programa Curricular de Educación Primaria, MINEDU 2016, VI ciclo",
+  fuente:"CNEB - Programa Curricular de Educación Primaria, MINEDU 2016, ciclo V (texto referencial: verificar con el documento oficial)",
   capacidades:["Obtiene información de textos orales","Infiere e interpreta información del texto oral","Adecúa, organiza y desarrolla el texto oral","Utiliza recursos no verbales y paraverbales","Interactúa estratégicamente con distintos interlocutores","Reflexiona y evalúa la forma, contenido y contexto del texto oral"],
   rubrica:{C:"Se expresa con ideas sueltas y poco organizadas, requiere apoyo para mantener el tema.",B:"Organiza sus ideas en torno a un tema, con vocabulario limitado y pocos recursos de apoyo.",A:"Se expresa con claridad y coherencia, adecúa su lenguaje al oyente y usa recursos no verbales pertinentes.",AD:"Se expresa con fluidez y argumentos sólidos, adapta su discurso a diferentes situaciones y evalúa críticamente su comunicación."}
 },
 "Lee diversos tipos de textos escritos en su lengua materna": {
   estandar:"Obtiene información explícita e infiere el significado de textos de estructura compleja, integra información para construir el sentido global, y opina sobre el contenido y los recursos textuales.",
-  fuente:"CNEB - Programa Curricular de Educación Primaria, MINEDU 2016, VI ciclo",
+  fuente:"CNEB - Programa Curricular de Educación Primaria, MINEDU 2016, ciclo V (texto referencial: verificar con el documento oficial)",
   capacidades:["Obtiene información del texto escrito","Infiere e interpreta información del texto","Reflexiona y evalúa la forma, el contenido y contexto del texto"],
   rubrica:{C:"Identifica información explícita sencilla, con dificultad para inferir ideas no dichas directamente.",B:"Comprende información explícita y realiza inferencias simples en textos de estructura básica.",A:"Infiere el significado de textos de estructura compleja y opina sobre su contenido con argumentos.",AD:"Interpreta textos complejos con distintos propósitos, evalúa críticamente su contenido y forma, y contrasta fuentes."}
 },
 "Escribe diversos tipos de textos en su lengua materna": {
   estandar:"Adecúa su texto al destinatario, propósito y registro, organiza y desarrolla ideas en torno a un tema evitando digresiones, usa conectores y recursos gramaticales apropiados, y revisa su texto para mejorarlo.",
-  fuente:"CNEB - Programa Curricular de Educación Primaria, MINEDU 2016, VI ciclo",
+  fuente:"CNEB - Programa Curricular de Educación Primaria, MINEDU 2016, ciclo V (texto referencial: verificar con el documento oficial)",
   capacidades:["Adecúa el texto a la situación comunicativa","Organiza y desarrolla las ideas de forma coherente y cohesionada","Utiliza convenciones del lenguaje escrito","Reflexiona y evalúa la forma, contenido y contexto del texto escrito"],
   rubrica:{C:"Escribe ideas sueltas, con poca organización y errores frecuentes de ortografía.",B:"Escribe textos breves con una idea central, con conectores limitados y algunos errores.",A:"Escribe textos organizados y coherentes, con vocabulario variado y uso adecuado de conectores y ortografía.",AD:"Escribe textos complejos y bien estructurados, revisa y mejora su propio texto, dominando el lenguaje escrito."}
 },
 "Construye su identidad": {
   estandar:"Se valora a sí mismo reconociendo sus características, cualidades, limitaciones y cambios propios de su edad, se relaciona con los demás con igualdad, autorregula sus emociones y actúa con autonomía cuidando su bienestar.",
-  fuente:"CNEB - Programa Curricular de Educación Primaria, MINEDU 2016, VI ciclo",
+  fuente:"CNEB - Programa Curricular de Educación Primaria, MINEDU 2016, ciclo V (texto referencial: verificar con el documento oficial)",
   capacidades:["Se valora a sí mismo","Autorregula sus emociones","Reflexiona y argumenta éticamente","Vive su sexualidad de manera integral"],
   rubrica:{C:"Reconoce algunas de sus características personales solo con apoyo del docente.",B:"Identifica sus cualidades y cambios propios de su edad, con dificultad para autorregular sus emociones en conflictos.",A:"Se reconoce y valora a sí mismo, se relaciona con igualdad y autorregula sus emociones en la mayoría de situaciones.",AD:"Actúa con autonomía y seguridad, autorregula sus emociones en situaciones difíciles y fortalece su identidad."}
 },
 "Convive y participa democráticamente en la búsqueda del bien común": {
   estandar:"Se relaciona con los demás respetando las diferencias, cumple con sus responsabilidades, construye y evalúa junto a sus compañeros las normas de convivencia, y participa en acciones orientadas al bien común.",
-  fuente:"CNEB - Programa Curricular de Educación Primaria, MINEDU 2016, VI ciclo",
+  fuente:"CNEB - Programa Curricular de Educación Primaria, MINEDU 2016, ciclo V (texto referencial: verificar con el documento oficial)",
   capacidades:["Interactúa con todas las personas","Construye normas y asume acuerdos y leyes","Maneja conflictos de manera constructiva","Delibera sobre asuntos públicos","Participa en acciones que promueven el bienestar común"],
   rubrica:{C:"Requiere recordatorios frecuentes para respetar normas básicas de convivencia.",B:"Cumple con sus responsabilidades y respeta las diferencias en la mayoría de situaciones.",A:"Convive respetando las diferencias, cumple y evalúa sus responsabilidades, y participa en la construcción de normas.",AD:"Propone y lidera acciones colectivas orientadas al bien común, y delibera sobre asuntos públicos con argumentos."}
 },
 "Construye interpretaciones históricas": {
   estandar:"Explica procesos históricos del Perú y el mundo a partir de la clasificación de sus causas y consecuencias, distingue entre diferentes fuentes históricas, y usa términos y referentes de tiempo para explicar cambios y permanencias.",
-  fuente:"CNEB - Programa Curricular de Educación Primaria, MINEDU 2016, VI ciclo",
+  fuente:"CNEB - Programa Curricular de Educación Primaria, MINEDU 2016, ciclo V (texto referencial: verificar con el documento oficial)",
   capacidades:["Interpreta críticamente fuentes diversas","Comprende el tiempo histórico","Explica y argumenta procesos históricos"],
   rubrica:{C:"Ubica hechos históricos sencillos en una línea de tiempo con apoyo constante.",B:"Reconoce causas y consecuencias básicas de un proceso histórico, con dificultad para usar fuentes diversas.",A:"Explica procesos históricos identificando causas y consecuencias, y usa distintas fuentes con autonomía.",AD:"Compara e interpreta críticamente diversas fuentes históricas y argumenta relaciones entre cambios y permanencias."}
 },
 "Gestiona responsablemente el espacio y el ambiente": {
   estandar:"Explica las relaciones entre los elementos naturales y sociales del espacio geográfico, evalúa problemáticas ambientales y territoriales, y participa en acciones de cuidado del ambiente y prevención de riesgos de desastre.",
-  fuente:"CNEB - Programa Curricular de Educación Primaria, MINEDU 2016, VI ciclo",
+  fuente:"CNEB - Programa Curricular de Educación Primaria, MINEDU 2016, ciclo V (texto referencial: verificar con el documento oficial)",
   capacidades:["Comprende las relaciones entre los elementos naturales y sociales","Maneja fuentes de información para comprender el espacio geográfico","Genera acciones para conservar el ambiente local y global"],
   rubrica:{C:"Identifica algunos elementos del espacio geográfico cercano con apoyo del docente.",B:"Explica relaciones simples entre elementos naturales y sociales de su localidad.",A:"Explica problemáticas ambientales de su entorno y propone acciones de cuidado del ambiente con autonomía.",AD:"Evalúa críticamente problemáticas territoriales y ambientales, y lidera acciones de prevención y cuidado."}
 },
 "Gestiona responsablemente los recursos económicos": {
   estandar:"Comprende las relaciones entre los elementos del sistema económico y financiero, toma conciencia de que los recursos son escasos, y administra los recursos propios y familiares tomando decisiones informadas.",
-  fuente:"CNEB - Programa Curricular de Educación Primaria, MINEDU 2016, VI ciclo",
+  fuente:"CNEB - Programa Curricular de Educación Primaria, MINEDU 2016, ciclo V (texto referencial: verificar con el documento oficial)",
   capacidades:["Comprende las relaciones entre los elementos del sistema económico y financiero","Toma decisiones económicas y financieras"],
   rubrica:{C:"Reconoce que el dinero sirve para comprar cosas, sin identificar relaciones más amplias.",B:"Explica de forma sencilla el origen de los recursos familiares y la necesidad de administrarlos.",A:"Comprende las relaciones económicas básicas y toma decisiones responsables sobre sus propios recursos.",AD:"Analiza críticamente el sistema económico y financiero y propone decisiones informadas para el bienestar familiar."}
 },
 "Indaga mediante métodos científicos para construir sus conocimientos": {
   estandar:"Formula preguntas e hipótesis, propone y ejecuta procedimientos para observar, medir y comparar información, y comunica sus conclusiones evaluando si confirman o refutan su hipótesis inicial.",
-  fuente:"CNEB - Programa Curricular de Educación Primaria, MINEDU 2016, VI ciclo",
+  fuente:"CNEB - Programa Curricular de Educación Primaria, MINEDU 2016, ciclo V (texto referencial: verificar con el documento oficial)",
   capacidades:["Problematiza situaciones","Diseña estrategias para hacer indagación","Genera y registra datos e información","Analiza datos e información","Evalúa y comunica el proceso y resultados de su indagación"],
   rubrica:{C:"Observa fenómenos simples pero necesita apoyo para formular preguntas o hipótesis.",B:"Formula preguntas sencillas y ejecuta procedimientos básicos de observación con ayuda del docente.",A:"Formula hipótesis, diseña y ejecuta procedimientos de indagación, y comunica sus conclusiones con autonomía.",AD:"Diseña indagaciones rigurosas, contrasta resultados con fuentes confiables y argumenta sus conclusiones científicas."}
 },
 "Explica el mundo físico basándose en conocimientos sobre los seres vivos, materia y energía, biodiversidad, Tierra y universo": {
   estandar:"Compara las características de los seres vivos, la materia y la energía, explica las relaciones entre estos y su ambiente, y justifica sus explicaciones con evidencia y conocimientos científicos.",
-  fuente:"CNEB - Programa Curricular de Educación Primaria, MINEDU 2016, VI ciclo",
+  fuente:"CNEB - Programa Curricular de Educación Primaria, MINEDU 2016, ciclo V (texto referencial: verificar con el documento oficial)",
   capacidades:["Comprende y usa conocimientos sobre los seres vivos, materia y energía, biodiversidad, Tierra y universo","Evalúa las implicancias del saber y quehacer científico y tecnológico"],
   rubrica:{C:"Describe características básicas de los seres vivos sin relacionarlas con su ambiente.",B:"Explica relaciones sencillas entre los seres vivos y su ambiente con apoyo.",A:"Explica con sus propias palabras relaciones entre materia, energía, seres vivos y ambiente, apoyándose en evidencia.",AD:"Argumenta explicaciones científicas complejas sobre el mundo físico, contrastando evidencia de diversas fuentes."}
 },
 "Diseña y construye soluciones tecnológicas para resolver problemas de su entorno": {
   estandar:"Determina un problema tecnológico y sus causas, diseña una alternativa de solución con conocimientos científicos o prácticos, construye su solución y evalúa comprobando su funcionamiento.",
-  fuente:"CNEB - Programa Curricular de Educación Primaria, MINEDU 2016, VI ciclo",
+  fuente:"CNEB - Programa Curricular de Educación Primaria, MINEDU 2016, ciclo V (texto referencial: verificar con el documento oficial)",
   capacidades:["Determina una alternativa de solución tecnológica","Diseña la alternativa de solución tecnológica","Implementa y valida la alternativa de solución tecnológica","Evalúa y comunica el funcionamiento de su solución tecnológica"],
   rubrica:{C:"Identifica problemas simples de su entorno con apoyo directo del docente.",B:"Propone soluciones tecnológicas sencillas, con dificultad para justificar su diseño.",A:"Diseña, construye y evalúa soluciones tecnológicas que responden a problemas de su entorno.",AD:"Diseña soluciones tecnológicas innovadoras, las evalúa críticamente y propone mejoras fundamentadas."}
 },
 "Aprecia de manera crítica manifestaciones artístico-culturales": {
   estandar:"Percibe manifestaciones artístico-culturales de su entorno y de otras culturas, describe las ideas y emociones que le transmiten, y las relaciona con su contexto de creación emitiendo una opinión personal.",
-  fuente:"CNEB - Programa Curricular de Educación Primaria, MINEDU 2016, VI ciclo",
+  fuente:"CNEB - Programa Curricular de Educación Primaria, MINEDU 2016, ciclo V (texto referencial: verificar con el documento oficial)",
   capacidades:["Percibe manifestaciones artístico-culturales","Contextualiza las manifestaciones artístico-culturales","Reflexiona creativa y críticamente"],
   rubrica:{C:"Observa manifestaciones artísticas simples sin expresar una opinión propia.",B:"Describe lo que observa en una obra artística con apoyo, con dificultad para relacionarla con su contexto.",A:"Describe y relaciona manifestaciones artístico-culturales con su contexto, emitiendo una opinión fundamentada.",AD:"Analiza críticamente manifestaciones artísticas de diversas culturas y argumenta con solidez su apreciación."}
 },
 "Crea proyectos desde los lenguajes artísticos": {
   estandar:"Explora y experimenta lenguajes del arte, combina elementos visuales, sonoros o kinestésicos para transmitir ideas, y aplica procesos creativos siguiendo intenciones expresivas propias.",
-  fuente:"CNEB - Programa Curricular de Educación Primaria, MINEDU 2016, VI ciclo",
+  fuente:"CNEB - Programa Curricular de Educación Primaria, MINEDU 2016, ciclo V (texto referencial: verificar con el documento oficial)",
   capacidades:["Explora y experimenta los lenguajes del arte","Aplica procesos creativos","Evalúa y socializa sus procesos y proyectos"],
   rubrica:{C:"Explora materiales artísticos de forma libre, sin una intención expresiva clara.",B:"Combina elementos artísticos sencillos para expresar una idea, con apoyo del docente.",A:"Crea proyectos artísticos con intención expresiva propia, combinando distintos elementos y lenguajes.",AD:"Crea proyectos artísticos originales y complejos, y fundamenta las decisiones creativas que tomó."}
 },
 "Construye su identidad como persona humana, amada por Dios, digna, libre y trascendente": {
   estandar:"Conoce y valora su dignidad como persona amada por Dios, relaciona su experiencia personal con la vida de Jesús y los valores del Evangelio, y actúa de acuerdo con su fe en su vida cotidiana.",
-  fuente:"Programa Curricular de Educación Primaria, MINEDU 2016 - Educación Religiosa, VI ciclo",
+  fuente:"Programa Curricular de Educación Primaria, MINEDU 2016 - Educación Religiosa, ciclo V (texto referencial: verificar con el documento oficial)",
   capacidades:["Conoce a Dios y asume su identidad religiosa y espiritual como persona digna, libre y trascendente"],
   rubrica:{C:"Reconoce que Dios lo ama, pero le cuesta relacionarlo con su vida diaria.",B:"Relaciona algunos valores del Evangelio con situaciones sencillas de su vida cotidiana.",A:"Reconoce y valora su dignidad como persona amada por Dios y actúa según los valores del Evangelio.",AD:"Vive de manera coherente su fe, relacionando con profundidad los valores del Evangelio con sus decisiones diarias."}
 },
 "Asume la experiencia del encuentro personal y comunitario con Dios en su proyecto de vida en coherencia con su creencia religiosa": {
   estandar:"Cultiva y expresa su experiencia de encuentro con Dios en su vida personal y comunitaria, participa de la vida de su comunidad de fe, y da razón de sus creencias con respeto hacia otras manifestaciones religiosas.",
-  fuente:"Programa Curricular de Educación Primaria, MINEDU 2016 - Educación Religiosa, VI ciclo",
+  fuente:"Programa Curricular de Educación Primaria, MINEDU 2016 - Educación Religiosa, ciclo V (texto referencial: verificar con el documento oficial)",
   capacidades:["Cultiva y expresa su fe de modo comprensible y respetuoso, participando en su comunidad de fe"],
   rubrica:{C:"Participa de actividades religiosas sin comprender su significado.",B:"Reconoce el sentido de algunas prácticas de su comunidad de fe, con apoyo del docente.",A:"Participa activamente en su comunidad de fe y expresa el sentido de su experiencia religiosa con sus propias palabras.",AD:"Da razón fundamentada de su fe, respeta otras creencias, y vive coherentemente su experiencia religiosa."}
 }
@@ -1096,6 +1096,7 @@ function actualizarSelectorFila(){
 }));
 
 // Utilidades de filas / evaluaciones
+function fixGrado(g){ return String(g||'').replace(/\(\s*VI\s+ciclo\s*\)/i,'(V ciclo)'); }
 function filaDe(s, id){ return (s && s.asignacion && s.asignacion[id]) || 'A'; }
 function preguntasDeFila(s, fila){ return (fila==='B' && s.preguntasB && s.preguntasB.length) ? s.preguntasB : s.preguntas; }
 function keyDeSesion(s){ return s.key || temaKey(s.area, s.competencia, s.tema); }
@@ -1479,7 +1480,7 @@ function abrirExamenGuardado(it, box){
   if(d.area) document.getElementById('area').value = d.area;
   populateCompetencias();
   if(d.competencia) document.getElementById('competencia').value = d.competencia;
-  if(d.grado) document.getElementById('grado').value = d.grado;
+  if(d.grado) document.getElementById('grado').value = fixGrado(d.grado);
   document.getElementById('tema').value = d.tema || '';
   document.getElementById('micropractica').value = d.micropractica || '';
   if(d.thresholds){
@@ -2087,7 +2088,7 @@ function generarPDF(s){
   const fecha = new Date(s.fecha);
   const fechaSesionTxt = s.fechaSesion ? formatLogicalDate(s.fechaSesion) : fecha.toLocaleDateString('es-PE');
   doc.text(`Fecha de evaluación / asistencia: ${fechaSesionTxt}`, margin, y); y+=6;
-  doc.text(`Grado/Sección: ${s.grado} — Sección "E"`, margin, y); y+=6;
+  doc.text(`Grado/Sección: ${fixGrado(s.grado)} — Sección "E"`, margin, y); y+=6;
   doc.text(`Área: ${s.area}`, margin, y); y+=6;
   doc.text(`Competencia: ${s.competencia}`, margin, y); y+=6;
   doc.text(`Tema de la clase: ${s.tema || ''}`, margin, y); y+=6;
@@ -2311,7 +2312,7 @@ function volverATomarSesion(sesionId){
   document.getElementById('area').value = s.area;
   populateCompetencias();
   document.getElementById('competencia').value = s.competencia;
-  document.getElementById('grado').value = s.grado || '5.° grado de primaria (VI ciclo)';
+  document.getElementById('grado').value = fixGrado(s.grado) || '5.° grado de primaria (V ciclo)';
   document.getElementById('tema').value = s.tema || '';
   document.getElementById('micropractica').value = s.micropractica || '';
   document.getElementById('thB').value = (s.thresholds && s.thresholds.B) ?? 50;

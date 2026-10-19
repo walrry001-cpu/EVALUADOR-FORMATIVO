@@ -1,5 +1,5 @@
 // Service worker: guarda la app y las librerías para usarla sin internet.
-const CACHE = 'evaluador-5e-fila-ab-v4';
+const CACHE = 'evaluador-5e-ciclo5-v5';
 const LOCAL = ['./','index.html','manifest.json','favicon.ico','icons/icon-192.png','icons/icon-512.png','icons/apple-touch-icon.png','icons/favicon-32.png','icons/favicon-16.png'];
 const CDN = [
   'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js',
