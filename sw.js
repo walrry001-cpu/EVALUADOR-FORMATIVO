@@ -1,5 +1,5 @@
 // Service worker: guarda la app y las librerías para usarla sin internet.
-const CACHE = 'evaluador-formativo-v2';
+const CACHE = 'evaluador-5e-fila-ab-v4';
 const LOCAL = ['./','index.html','manifest.json','favicon.ico','icons/icon-192.png','icons/icon-512.png','icons/apple-touch-icon.png','icons/favicon-32.png','icons/favicon-16.png'];
 const CDN = [
   'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js',
@@ -13,12 +13,15 @@ self.addEventListener('install', e=>{
   }).then(()=>self.skipWaiting()));
 });
 self.addEventListener('activate', e=>{
-  e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim()));
+  e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==CACHE && /^evaluador/.test(k)).map(k=>caches.delete(k)))).then(()=>self.clients.claim()));
 });
 self.addEventListener('fetch', e=>{
   if(e.request.method!=='GET') return;
   e.respondWith(
-    caches.match(e.request).then(hit=>{
+    (e.request.mode==='navigate'
+      ? fetch(e.request).then(r=>{ const cp=r.clone(); caches.open(CACHE).then(c=>c.put(e.request,cp)); return r; }).catch(()=>caches.match(e.request).then(h=>h||caches.match('index.html')))
+      : caches.match(e.request)).then(hit=>{
+      if(e.request.mode==='navigate') return hit;
       const red = fetch(e.request).then(r=>{
         if(r && (r.ok || r.type==='opaque')){ const cp=r.clone(); caches.open(CACHE).then(c=>c.put(e.request,cp)); }
         return r;

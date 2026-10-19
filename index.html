@@ -412,6 +412,19 @@
       <div id="avisoPendientes"></div>
     </div>
 
+    <div class="card" id="filasPreviasCard">
+      <h2>1b · Fila A o B de cada estudiante</h2>
+      <p class="hint">Elige aquí, antes de iniciar el examen, quiénes rinden la <b>Fila A</b> y quiénes la <b>Fila B</b> (por ejemplo, según cómo están sentados). Queda guardado para las próximas evaluaciones y se puede cambiar cuando quieras.</p>
+      <div class="fila-tools">
+        <button type="button" class="btn outline small" id="btnPreTodosA">Todos A</button>
+        <button type="button" class="btn outline small" id="btnPreTodosB">Todos B</button>
+        <button type="button" class="btn outline small" id="btnPreAlternar">A/B alternado</button>
+        <button type="button" class="btn outline small" id="btnPreLimpiar">Limpiar</button>
+      </div>
+      <div class="roster-list" id="filasPreviasList"></div>
+      <div class="attendance-summary" id="filasPreviasResumen"></div>
+    </div>
+
     <div class="card">
       <h2>2 · Datos de la sesión</h2>
       <p class="hint">Esto se usa para buscar el estándar oficial y generar preguntas coherentes con tu clase.</p>
@@ -780,6 +793,7 @@ function updateAttendanceSummary(){
   document.getElementById('presentCount').textContent = present;
   document.getElementById('absentCount').textContent = ROSTER.length - present;
   renderAvisoPendientes();
+  if(typeof renderFilasPrevias === 'function') renderFilasPrevias();
 }
 
 // Aviso solo para quien YA regresó (está presente hoy) y debe una evaluación concreta.
@@ -1236,7 +1250,51 @@ if(window.pdfjsLib){
   pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 }
 
+// Formato de las pruebas por filas: "Pregunta 1 (Nivel C – Inicio) — título", enunciado,
+// opciones "( ) A) …" (pueden continuar en la línea siguiente), "[Guía: …]", "Respuesta correcta: B (…)" y "Reto: …".
+function parsePreguntasFormatoPregunta(texto){
+  const lineas = texto.split(/\r?\n/).map(l=>l.trim()).filter(l=>l.length>0);
+  const reInicio = /^Pregunta\s+(\d{1,2})\b/i;
+  const reOpcion = /^(?:[\(\[]\s*[xX✓✔]?\s*[\)\]]\s*)?([A-Da-d])\s*[\)\.]\s*(.*)$/;
+  const reRpta = /^(?:respuesta\s+correcta|rpta|clave)\s*:?\s*[\(\[]?\s*([A-Da-d])\b/i;
+  const bloques = [];
+  let actual = null;
+  lineas.forEach(l=>{
+    if(reInicio.test(l)){ actual = [l]; bloques.push(actual); }
+    else if(actual) actual.push(l);
+  });
+  const out = [];
+  bloques.forEach(b=>{
+    let titulo = b[0].replace(reInicio,'').replace(/^\s*\([^)]*\)\s*/,'').replace(/^[\s—–\-:]+/,'').trim();
+    let enunciado = '';
+    const ops = ['','','',''];
+    let ultima = -1, modo = 'enun', letra = null;
+    b.slice(1).forEach(l=>{
+      const mR = l.match(reRpta);
+      if(mR){ letra = mR[1].toLowerCase(); modo = 'fin'; return; }
+      if(/^reto\s*:/i.test(l)){ modo = 'fin'; return; }
+      if(/^\[\s*gu[ií]a/i.test(l)) return;
+      if(modo === 'fin') return;
+      const mO = l.match(reOpcion);
+      if(mO && modo !== 'fin'){
+        const i = 'abcd'.indexOf(mO[1].toLowerCase());
+        if(ultima < i){ ops[i] = mO[2].trim(); ultima = i; modo = 'opc'; return; }
+      }
+      if(modo === 'enun') enunciado += (enunciado ? ' ' : '') + l;
+      else if(modo === 'opc' && ultima >= 0) ops[ultima] += ' ' + l;
+    });
+    let pregunta = titulo;
+    if(enunciado) pregunta = titulo ? (/[?.!:]$/.test(titulo) ? titulo+' '+enunciado : titulo+' — '+enunciado) : enunciado;
+    if(pregunta.trim() && ops.every(o=>o.trim())){
+      const idx = letra ? 'abcd'.indexOf(letra) : 0;
+      out.push({ pregunta: pregunta.trim(), opciones: ops.map(o=>o.trim()), correcta: idx>=0?idx:0, rptaDetectada: !!letra });
+    }
+  });
+  return out.slice(0,6);
+}
+
 function parsePDFTextoAPreguntas(texto){
+  if(/^\s*Pregunta\s+\d{1,2}\b/im.test(texto)) return parsePreguntasFormatoPregunta(texto);
   // Formato compacto: si las opciones o la respuesta vienen pegadas en la
   // misma línea que el enunciado (típico al extraer texto de un PDF), se
   // separan primero en líneas propias para que el resto del parseo funcione igual.
@@ -1340,6 +1398,8 @@ document.getElementById('pdfPreguntas').addEventListener('change', async (e)=>{
     }
 
     const sinRpta = preguntasDetectadas.filter(q=>!q.rptaDetectada).length;
+    const faltan = preguntasDetectadas.length < 6
+      ? `<br><span style="color:var(--danger,#b3261e);">⚠ Se esperaban 6 preguntas y solo se reconocieron ${preguntasDetectadas.length}. Completa las que falten a mano con "+ Agregar pregunta".</span>` : '';
 
     // Las preguntas se cargan tal cual se detectaron en el PDF, sin alterar
     // el orden de las opciones a/b/c/d ni la letra marcada como correcta.
@@ -1348,6 +1408,7 @@ document.getElementById('pdfPreguntas').addEventListener('change', async (e)=>{
     renderBanco();
 
     statusBox.innerHTML = `<span style="color:var(--good,#2e7d32);">✔ Fila ${filaEditando}: se importaron ${preguntasDetectadas.length} pregunta(s), tal como aparecen en el PDF (mismo orden de opciones a/b/c/d).</span>
+      ${faltan}
       ${sinRpta>0 ? `<br><span style="color:var(--danger,#b3261e);">⚠ En ${sinRpta} pregunta(s) no se detectó la línea "Rpta:" — revisa cuál opción quedó marcada como correcta antes de guardar.</span>` : ''}
       <br>Revisa el texto y las opciones abajo antes de guardar; el reconocimiento es automático por patrones, no por inteligencia artificial, así que puede tener errores.`;
 
@@ -1602,6 +1663,39 @@ function mostrarCapacidades(){
    SELECT STUDENTS TO EVALUATE
 ============================================================ */
 document.getElementById('btnDefinirEvaluados').addEventListener('click', definirEvaluados);
+
+function renderFilasPrevias(){
+  const list = document.getElementById('filasPreviasList');
+  if(!list) return;
+  list.innerHTML = ROSTER.map(r=>{
+    const f = state.filas[r.id] || null;
+    const aus = !state.attendance[r.id];
+    return `<div class="roster-row${aus?' absent':''}">
+      <span class="num">${String(r.num).padStart(2,'0')}</span>
+      <span class="name">${r.name}${aus?' <small>(ausente hoy)</small>':''}</span>
+      <span class="fila-group" data-id="${r.id}">
+        <button type="button" class="fila-btn ${f==='A'?'on-A':''}" data-f="A">A</button>
+        <button type="button" class="fila-btn ${f==='B'?'on-B':''}" data-f="B">B</button>
+      </span>
+    </div>`;
+  }).join('');
+  list.querySelectorAll('.fila-group').forEach(g=>{
+    g.querySelectorAll('button').forEach(b=>b.addEventListener('click', ()=>{
+      const id = g.dataset.id;
+      if(state.filas[id] === b.dataset.f) delete state.filas[id]; else state.filas[id] = b.dataset.f;
+      saveFilas(); renderFilasPrevias();
+    }));
+  });
+  const pres = ROSTER.filter(r=>state.attendance[r.id]);
+  const nA = pres.filter(r=>state.filas[r.id]==='A').length, nB = pres.filter(r=>state.filas[r.id]==='B').length;
+  document.getElementById('filasPreviasResumen').innerHTML =
+    `<span><b>${nA}</b> Fila A</span><span><b>${nB}</b> Fila B</span><span><b>${pres.length-nA-nB}</b> sin fila (presentes)</span>`;
+}
+function setFilasTodos(fn){ ROSTER.forEach((r,i)=>{ const f = fn(r,i); if(f) state.filas[r.id]=f; else delete state.filas[r.id]; }); saveFilas(); renderFilasPrevias(); }
+document.getElementById('btnPreTodosA').addEventListener('click', ()=>setFilasTodos(()=>'A'));
+document.getElementById('btnPreTodosB').addEventListener('click', ()=>setFilasTodos(()=>'B'));
+document.getElementById('btnPreAlternar').addEventListener('click', ()=>setFilasTodos((r,i)=> i%2===0 ? 'A':'B'));
+document.getElementById('btnPreLimpiar').addEventListener('click', ()=>setFilasTodos(()=>null));
 
 let asig = {};   // id -> 'A' | 'B' | null (solo para esta evaluación)
 
