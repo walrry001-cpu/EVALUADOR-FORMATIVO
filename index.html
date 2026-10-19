@@ -622,7 +622,7 @@
 
 <div class="footer-note">
   Evaluador formativo permanente · I.E. N.° 82019 "La Florida del Inca" · Prof. Walter Rodrigo Arribasplata Chavarry<br>
-  Los datos se guardan en este dispositivo/navegador.
+  Los datos se guardan en este dispositivo/navegador.<br>Versión 20261019b
 </div>
 
 <script>
@@ -1486,20 +1486,44 @@ function renderListaExamenes(box, items, {compact}={}){
     box.innerHTML = '<p class="hint">Todavía no hay ningún examen guardado en este dispositivo.</p>';
     return;
   }
-  box.innerHTML = '<p class="hint">Elige el examen que quieres reabrir:</p>' +
+  box.innerHTML = '<p class="hint">Elige el examen que quieres reabrir (o elimina los que ya no uses con 🗑️):</p>' +
     items.map((it,i)=>{
       const d = it.datos;
       const nombre = `${d.area || '(sin área)'} — ${d.tema || '(sin tema)'}`;
       const fecha = formatearFechaGuardado(d.guardadoEn);
       const nA = (d.preguntas||[]).length, nB = (d.preguntasB||[]).length;
-      return `<button type="button" class="btn outline" data-examen-idx="${i}" style="display:block;width:100%;text-align:left;margin-top:6px;">
-        <strong>${escapeAttr(nombre)}</strong><br>
-        <span style="font-size:11.5px;color:var(--ink-soft);">${escapeAttr(d.competencia||'')} · Fila A: ${nA} preg. · Fila B: ${nB} preg.${fecha ? ' · guardado el '+fecha : ''}</span>
-      </button>`;
+      return `<div style="display:flex;gap:6px;align-items:stretch;margin-top:6px;">
+        <button type="button" class="btn outline" data-examen-idx="${i}" style="display:block;flex:1;min-width:0;text-align:left;">
+          <strong>${escapeAttr(nombre)}</strong><br>
+          <span style="font-size:11.5px;color:var(--ink-soft);">${escapeAttr(d.competencia||'')} · Fila A: ${nA} preg. · Fila B: ${nB} preg.${fecha ? ' · guardado el '+fecha : ''}</span>
+        </button>
+        <button type="button" class="btn outline small" data-borrar-idx="${i}" title="Eliminar este examen guardado" aria-label="Eliminar ${escapeAttr(nombre)}" style="flex:0 0 auto;">🗑️<br><span style="font-size:11px;">Eliminar</span></button>
+      </div>`;
     }).join('');
 
   box.querySelectorAll('[data-examen-idx]').forEach(btn=>{
     btn.addEventListener('click', ()=>abrirExamenGuardado(items[Number(btn.dataset.examenIdx)], box));
+  });
+
+  // Eliminar un examen guardado que ya no se va a usar
+  box.querySelectorAll('[data-borrar-idx]').forEach(btn=>{
+    btn.addEventListener('click', async ()=>{
+      const idx = Number(btn.dataset.borrarIdx);
+      const it = items[idx];
+      if(!it) return;
+      const d = it.datos;
+      const nombre = `${d.area || '(sin área)'} — ${d.tema || '(sin tema)'}`;
+      const fecha = formatearFechaGuardado(d.guardadoEn);
+      if(!confirm(`¿Eliminar este examen guardado?\n\n${nombre}${fecha ? '\nGuardado el '+fecha : ''}\n\nEsta acción no se puede deshacer. Los resultados ya guardados en el registro NO se borran.`)) return;
+      try{ await storage.delete(it.key); }catch(e){ alert('No se pudo eliminar el examen.'); return; }
+      items.splice(idx, 1);
+      renderListaExamenes(box, items, {compact});
+      // si ya no queda ninguno, oculta la tarjeta de inicio
+      if(items.length === 0){
+        const card = document.getElementById('examenesGuardadosCard');
+        if(card && card.contains(box)) card.style.display = 'none';
+      }
+    });
   });
 }
 
@@ -1753,9 +1777,10 @@ function definirEvaluados(){
 
 function renderAsignacion(){
   const s = state.currentSession;
-  const presentes = ROSTER.filter(r=>state.attendance[r.id]);
   const pendKey = pendientesDeEval(s.key);
   const pendIds = new Set(pendKey.map(p=>p.id));
+  // Si el examen se reabre para recuperación, solo aparecen los pendientes (los que faltaron)
+  const presentes = ROSTER.filter(r=>state.attendance[r.id] && (!s.recuperacion || pendIds.has(r.id)));
 
   const av = document.getElementById('avisoPendientesEval');
   if(pendKey.length){
@@ -1764,7 +1789,7 @@ function renderAsignacion(){
         const st = ROSTER.find(r=>r.id===p.id);
         if(!st) return '';
         return `<li>${st.name} — ${state.attendance[p.id] ? '✔ presente hoy' : 'aún ausente'}</li>`;
-      }).join('') + `</ul>${s.recuperacion ? '<span style="font-size:12px;color:var(--ink-soft);">Se marcó solo a quienes la deben; los demás quedan en “—”.</span>' : ''}</div>`;
+      }).join('') + `</ul>${s.recuperacion ? '<span style="font-size:12px;color:var(--ink-soft);">Solo aparecen los estudiantes pendientes (los que faltaron); quienes ya rindieron no se muestran.</span>' : ''}</div>`;
   } else av.innerHTML = '';
 
   const list = document.getElementById('asignacionList');
@@ -1797,7 +1822,9 @@ function renderAsignacion(){
 }
 
 function asignarATodos(f){
-  ROSTER.filter(r=>state.attendance[r.id]).forEach(r=>{ asig[r.id] = f; if(f) state.filas[r.id] = f; });
+  const _s = state.currentSession;
+  const _pend = new Set(_s && _s.recuperacion ? pendientesDeEval(_s.key).map(p=>p.id) : []);
+  ROSTER.filter(r=>state.attendance[r.id] && (!(_s && _s.recuperacion) || _pend.has(r.id))).forEach(r=>{ asig[r.id] = f; if(f) state.filas[r.id] = f; });
   saveFilas(); renderAsignacion();
 }
 document.getElementById('btnTodosA').addEventListener('click', ()=>asignarATodos('A'));
@@ -1811,12 +1838,13 @@ document.getElementById('btnConfirmarFilas').addEventListener('click', ()=>{
   const s = state.currentSession;
   if(!s) return;
   const err = document.getElementById('asignacionError');
-  const presentes = ROSTER.filter(r=>state.attendance[r.id]);
+  const _pendIds = new Set(pendientesDeEval(s.key).map(p=>p.id));
+  const presentes = ROSTER.filter(r=>state.attendance[r.id] && (!s.recuperacion || _pendIds.has(r.id)));
   const ausentes = ROSTER.filter(r=>!state.attendance[r.id]);
   const ids = presentes.filter(r=>asig[r.id]).map(r=>r.id);
   const sinFila = presentes.length - ids.length;
   if(ids.length === 0){
-    err.innerHTML = '<div class="error-box">Asigna al menos un estudiante a la Fila A o B.</div>';
+    err.innerHTML = s.recuperacion ? '<div class="error-box">No hay estudiantes pendientes presentes hoy. Activa su asistencia en la pestaña de asistencia y asígnales fila.</div>' : '<div class="error-box">Asigna al menos un estudiante a la Fila A o B.</div>';
     return;
   }
   if(sinFila > 0 && !s.recuperacion &&
@@ -1916,7 +1944,42 @@ function startNextStudent(){
   quizQIndex = 0;
   quizCurrentCorrect = 0;
   quizBonusCorrect = null;
-  renderQuizQuestion();
+  // Si el estudiante había sido aplazado, continúa donde se quedó
+  const par = s.parciales && s.parciales[s.seleccionados[quizQueueIndex]];
+  if(par){ quizQIndex = par.qIndex; quizCurrentCorrect = par.correct; }
+  if(quizQIndex >= 5 && quizCurrentCorrect === 5 && preguntasActuales().length >= 6){
+    renderBonusQuestion();
+  } else {
+    renderQuizQuestion();
+  }
+}
+
+// Botón "No está listo": el estudiante aún no respondió ninguna pregunta; pasa al siguiente
+// y él va al final de la cola (se evalúa el mismo día, empezando de cero).
+function insertAplazarBtn(){
+  const s = state.currentSession;
+  const body = document.querySelector('#quizArea .quiz-body');
+  if(!body) return;
+  if(quizQIndex > 0) return; // solo se ofrece antes de responder la primera pregunta
+  const quedan = s.seleccionados.length - quizQueueIndex;
+  const wrap = document.createElement('div');
+  wrap.style.cssText = 'margin-top:14px; padding-top:12px; border-top:1px dashed #cfd3e0;';
+  wrap.innerHTML = `<button type="button" class="btn outline small" id="btnAplazar" ${quedan<=1?'disabled':''}>⏭ No está listo: pasar al siguiente (va al final de la cola)</button>` +
+    (quedan<=1 ? `<p class="hint" style="margin:6px 0 0;">Es el último de la cola, no hay a quién pasar.</p>` : '');
+  body.appendChild(wrap);
+  document.getElementById('btnAplazar').addEventListener('click', aplazarEstudiante);
+}
+
+function aplazarEstudiante(){
+  const s = state.currentSession;
+  if(s.seleccionados.length - quizQueueIndex <= 1) return;
+  const id = s.seleccionados[quizQueueIndex];
+  const st = ROSTER.find(r=>r.id===id);
+  if(!confirm(`¿${st.name} no está listo para responder? Pasará al final de la cola y se evaluará hoy, desde la primera pregunta.`)) return;
+  s.seleccionados.splice(quizQueueIndex, 1);
+  s.seleccionados.push(id);
+  renderQueueUI();
+  startNextStudent();
 }
 
 function updateQueueChips(){
@@ -1952,6 +2015,7 @@ function renderQuizQuestion(){
   document.querySelectorAll('.quiz-opt').forEach(btn=>{
     btn.addEventListener('click', ()=>answerQuiz(Number(btn.dataset.i)));
   });
+  insertAplazarBtn();
 }
 
 function renderBonusQuestion(){
@@ -1978,6 +2042,7 @@ function renderBonusQuestion(){
   document.querySelectorAll('.quiz-opt').forEach(btn=>{
     btn.addEventListener('click', ()=>answerBonus(Number(btn.dataset.i)));
   });
+  insertAplazarBtn();
 }
 
 function answerQuiz(chosenIndex){
@@ -1985,6 +2050,7 @@ function answerQuiz(chosenIndex){
   const q = preguntasActuales()[quizQIndex];
   const buttons = document.querySelectorAll('.quiz-opt');
   buttons.forEach(b=>b.disabled = true);
+  const ap1 = document.getElementById('btnAplazar'); if(ap1) ap1.disabled = true;
   buttons[q.correcta].classList.add('correct');
   if(chosenIndex !== q.correcta){
     buttons[chosenIndex].classList.add('incorrect');
@@ -2008,6 +2074,7 @@ function answerBonus(chosenIndex){
   const q = preguntasActuales()[5];
   const buttons = document.querySelectorAll('.quiz-opt');
   buttons.forEach(b=>b.disabled = true);
+  const ap2 = document.getElementById('btnAplazar'); if(ap2) ap2.disabled = true;
   buttons[q.correcta].classList.add('correct');
   if(chosenIndex !== q.correcta){
     buttons[chosenIndex].classList.add('incorrect');
@@ -2028,6 +2095,7 @@ function finishStudent(){
   const s = state.currentSession;
   const studentId = s.seleccionados[quizQueueIndex];
   const student = ROSTER.find(r=>r.id===studentId);
+  if(s.parciales) delete s.parciales[studentId];
   const pct = Math.round((quizCurrentCorrect / 5) * 100);
   let nivel;
   if(pct === 100){
@@ -2422,11 +2490,32 @@ document.getElementById('btnRestaurarBackup').addEventListener('click', async ()
 /* ============================================================
    PWA — instalación en el celular y uso sin internet
 ============================================================ */
-if('serviceWorker' in navigator){
-  window.addEventListener('load', ()=>{
-    navigator.serviceWorker.register('sw.js').catch(()=>{});
-  });
-}
+const BUILD_ID = '20261019b';
+(async function limpiarCacheYRegistrar(){
+  // Una sola vez por versión: borra cachés del navegador y service workers anteriores.
+  // NO toca los datos guardados (exámenes, registro, sesiones): esos están en localStorage.
+  try{
+    if(localStorage.getItem('evaluadorBuild') !== BUILD_ID){
+      if('caches' in window){
+        const ks = await caches.keys();
+        await Promise.all(ks.map(k=>caches.delete(k)));
+      }
+      if('serviceWorker' in navigator){
+        const regs = await navigator.serviceWorker.getRegistrations();
+        await Promise.all(regs.map(r=>r.unregister()));
+      }
+      localStorage.setItem('evaluadorBuild', BUILD_ID);
+    }
+  }catch(e){}
+  if('serviceWorker' in navigator){
+    window.addEventListener('load', ()=>{
+      navigator.serviceWorker.register('sw-v20261019b.js').catch(()=>{});
+    });
+    if(document.readyState === 'complete'){
+      navigator.serviceWorker.register('sw-v20261019b.js').catch(()=>{});
+    }
+  }
+})();
 
 /* ============================================================
    INIT
