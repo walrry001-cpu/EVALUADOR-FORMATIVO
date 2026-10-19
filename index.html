@@ -352,6 +352,14 @@
   }
   .field-with-btn{display:flex; gap:8px; align-items:flex-start;}
   .field-with-btn select{flex:1;}
+  .fila-group{display:flex; gap:4px; flex-shrink:0;}
+  .fila-btn{border:1.5px solid var(--line); background:#fff; border-radius:8px; padding:6px 12px; font-weight:700; font-size:13px; cursor:pointer; color:var(--ink-soft); min-width:42px; font-family:inherit;}
+  .fila-btn.on-A{background:var(--navy); color:#fff; border-color:var(--navy);}
+  .fila-btn.on-B{background:var(--gold,#c98a2e); color:#2a1c04; border-color:var(--gold,#c98a2e);}
+  .fila-btn.on-X{background:#9aa0ad; color:#fff; border-color:#9aa0ad;}
+  .fila-tools{display:flex; gap:8px; flex-wrap:wrap; margin:10px 0;}
+  .aviso-pend{border-left:4px solid var(--gold,#c98a2e); background:#fff8ea; padding:10px 12px; border-radius:6px; font-size:13px; margin-top:12px;}
+  .aviso-pend ul{margin:6px 0 0; padding-left:18px;}
 </style>
 </head>
 <body>
@@ -394,27 +402,14 @@
 
     <div class="card">
       <h2>1 · Asistencia del día</h2>
-      <p class="hint">Marca quién falta hoy. Los ausentes quedan pendientes de evaluación obligatoria para cuando regresen. La asistencia se reinicia automáticamente cada día a las 7:00 a. m.</p>
+      <p class="hint">Marca quién falta hoy. Quien falte el día de una evaluación queda pendiente solo de esa evaluación (se avisa cuando regrese). La asistencia se reinicia automáticamente cada día a las 7:00 a. m.</p>
       <div class="date-line" id="sessionDateLine"></div>
       <div class="roster-list" id="rosterList"></div>
       <div class="attendance-summary">
         <span><b id="presentCount">0</b> presentes</span>
         <span><b id="absentCount">0</b> ausentes</span>
-        <span><b id="pendingCount">0</b> con evaluación pendiente</span>
       </div>
-    </div>
-
-    <div class="card">
-      <button type="button" class="btn outline small" id="toggleGestionEstudiantes">⚙ Gestionar estudiantes (matrícula / retiro)</button>
-      <div id="gestionEstudiantesBox" style="display:none; margin-top:12px;">
-        <p class="hint">Un estudiante recién matriculado se agrega aquí y se ubica solo, en orden alfabético, en toda la app. Un estudiante retirado se elimina aquí junto con toda su información guardada (cola de pendientes e historial de evaluaciones).</p>
-        <div style="display:flex; gap:8px; margin:10px 0;">
-          <input type="text" id="inputNuevoEstudiante" placeholder="Nombre completo del estudiante nuevo" style="flex:1;">
-          <button type="button" class="btn" id="btnAgregarEstudiante">➕ Agregar</button>
-        </div>
-        <div id="gestionEstudiantesStatus" style="font-size:12.5px; margin-bottom:8px;"></div>
-        <div id="listaGestionEstudiantes" class="roster-list"></div>
-      </div>
+      <div id="avisoPendientes"></div>
     </div>
 
     <div class="card">
@@ -437,7 +432,7 @@
         </div>
         <div>
           <label>Grado / Ciclo</label>
-          <input type="text" id="grado" value="5.° grado de primaria (V ciclo)">
+          <input type="text" id="grado" value="5.° grado de primaria (VI ciclo)">
         </div>
       </div>
       <label>Competencia trabajada</label>
@@ -451,6 +446,13 @@
       <input type="text" id="tema" placeholder='Ej: "La multiplicación con la propiedad distributiva" / "El respeto en la convivencia escolar"'>
 
       <div class="fixed-quiz-note">⚡ Cada evaluación usa <b>5 preguntas base</b> (100%) + <b>1 pregunta adicional</b> que solo se activa cuando el estudiante acierta las 5 base, y define el nivel <b>AD</b>.</div>
+
+      <label>⚡ Micropráctica diaria de refuerzo (neuroaprendizaje — 5 a 10 min, todos los días de la semana)</label>
+      <p class="hint" style="margin-top:-4px;">El cerebro retiene más por constancia que por intensidad. Escribe un reto corto de recuperación activa ligado al tema de hoy; se repite a diario (no como tarea extensa) hasta la próxima sesión.</p>
+      <div class="field-with-btn">
+        <textarea id="micropractica" rows="2" placeholder='Ej: 2 divisiones exactas sencillas por día en la libreta, revisadas al inicio de cada clase.' style="flex:1;resize:vertical;"></textarea>
+        <button class="btn outline small" id="btnSugerirMicro" type="button" style="white-space:nowrap;">💡 Sugerir</button>
+      </div>
 
       <label>Umbrales de calificación (% de aciertos en las 5 preguntas base)</label>
       <div class="rubric-grid" id="rubricThresholds">
@@ -477,8 +479,23 @@
       <h2>Preguntas de la evaluación formativa</h2>
       <p class="hint">Estas preguntas las escribes tú una sola vez por tema; quedan guardadas en este dispositivo y se reutilizan automáticamente la próxima vez que trabajes el mismo tema. Se muestran al estudiante <b>exactamente en el orden en que las escribes aquí</b> (Pregunta 1, 2, 3, 4, 5 y la adicional), y cada opción aparece siempre marcada con su letra (a, b, c, d) para que no marques la respuesta equivocada al calificar.</p>
 
+      <div style="margin:10px 0;padding:12px;border:2px solid var(--navy);border-radius:10px;">
+        <label style="margin-top:0;">Examen que estás editando (se guardan los dos juntos, misma fecha y tema)</label>
+        <div class="fila-tools" style="margin-bottom:4px;">
+          <button type="button" class="fila-btn" id="btnEditarFilaA">Fila A</button>
+          <button type="button" class="fila-btn" id="btnEditarFilaB">Fila B</button>
+        </div>
+        <p class="hint" id="filaEditandoTxt" style="margin:0;"></p>
+      </div>
+
+      <div style="margin:10px 0;">
+        <label>📷 Foto de referencia del tema (opcional, solo para tu apoyo visual al redactar — no se analiza ni se envía a ningún servicio)</label>
+        <input type="file" id="fotoTema" accept="image/*">
+        <div id="fotoTemaPreview" style="margin-top:8px;"></div>
+      </div>
+
       <div style="margin:10px 0;padding:12px;border:1px dashed var(--line);border-radius:10px;">
-        <label>📄 Importar preguntas desde PDF (exactamente 6 — 5 base + 1 adicional al final — pregunta numerada, 4 opciones a) b) c) d), e idealmente una línea "Rpta: b")</label>
+        <label>📄 Importar preguntas desde PDF a la fila elegida arriba (exactamente 6 — 5 base + 1 adicional al final — pregunta numerada, 4 opciones a) b) c) d), e idealmente una línea "Rpta: b")</label>
         <input type="file" id="pdfPreguntas" accept="application/pdf">
         <div id="pdfImportStatus" style="margin-top:8px;font-size:12.5px;color:var(--ink-soft);"></div>
       </div>
@@ -505,15 +522,35 @@
       <h2>Preguntas generadas</h2>
       <div id="questionsPreview" style="font-size:13.5px; line-height:1.6;"></div>
       <div style="margin-top:14px;">
-        <button class="btn" id="btnDefinirEvaluados">▶️ Iniciar evaluación — llamar a los 28 en orden de lista →</button>
+        <button class="btn" id="btnDefinirEvaluados">▶️ Elegir filas A / B y comenzar →</button>
       </div>
+    </div>
+
+    <div class="card" id="asignacionCard" style="display:none;">
+      <h2>Asignar fila del examen (A o B)</h2>
+      <p class="hint">Toca <b>A</b> o <b>B</b> en cada estudiante presente: recibirá el examen de esa fila. Se guarda para las próximas evaluaciones. Con <b>—</b> no se le evalúa ahora.</p>
+      <div id="avisoPendientesEval"></div>
+      <div class="fila-tools">
+        <button type="button" class="btn outline small" id="btnTodosA">Todos A</button>
+        <button type="button" class="btn outline small" id="btnTodosB">Todos B</button>
+        <button type="button" class="btn outline small" id="btnLimpiarFilas">Limpiar</button>
+      </div>
+      <div class="roster-list" id="asignacionList"></div>
+      <div class="attendance-summary" id="asignacionResumen"></div>
+      <div id="asignacionError"></div>
+      <div style="margin-top:12px;"><button class="btn gold" id="btnConfirmarFilas">▶️ Comenzar evaluación</button></div>
     </div>
   </section>
 
   <!-- TAB: EVALUACION -->
   <section id="tab-evaluacion" style="display:none;">
+    <div class="card" id="microCard" style="display:none; border-left:4px solid var(--gold, #c98a2e);">
+      <h2>⚡ Micropráctica diaria (recordatorio)</h2>
+      <p class="hint" id="microCardText"></p>
+      <p class="hint" style="margin-top:6px;">Repite este reto corto de 5-10 min todos los días hasta la próxima sesión de evaluación. La constancia fija más el aprendizaje que una sola práctica intensa.</p>
+    </div>
     <div class="card" id="selectionCard">
-      <h2>Orden de llamada de hoy (N.° 1 al <span id="totalRosterHoy">28</span>)</h2>
+      <h2>Orden de llamada de hoy (lista alfabética)</h2>
       <p class="hint" id="selectionReason">Genera una sesión primero en la pestaña "Nueva sesión".</p>
       <div class="queue-list" id="queueList"></div>
       <button class="btn outline small" id="btnDescartarSesionActiva" style="margin-top:10px;">🗑️ Descartar esta evaluación</button>
@@ -531,7 +568,7 @@
   <section id="tab-pendientes" style="display:none;">
     <div class="card">
       <h2>Estudiantes con evaluación pendiente</h2>
-      <p class="hint">Se agregan automáticamente cuando faltan el día de una evaluación formativa. Se les evalúa obligatoriamente el día que regresen.</p>
+      <p class="hint">Cada estudiante aparece aquí solo por la evaluación concreta (tema y fecha) que no rindió. Al rendirla, desaparece.</p>
       <div id="pendingList"></div>
     </div>
   </section>
@@ -542,12 +579,6 @@
       <h2>Registro histórico de evaluaciones</h2>
       <p class="hint">Todas las sesiones guardadas, por área y competencia.</p>
       <div id="registroList"></div>
-    </div>
-    <div class="card">
-      <h2>📄 Importar historial desde un PDF de informe anterior</h2>
-      <p class="hint">Si perdiste el registro guardado en este dispositivo (por ejemplo, cambiaste de celular o borraste el caché sin haber hecho una copia de seguridad), puedes reconstruirlo a partir de los PDF de "Informe de Evaluación Formativa" que ya descargaste antes. Solo se recupera el resultado de cada estudiante (nivel, aciertos, conclusión) — las 6 preguntas originales de ese día NO quedan guardadas, ya que el PDF no las incluye. Si un estudiante aparece a la vez como evaluado y como ausente en el mismo PDF (el error de haberlo respondido por error en vez de marcarlo ausente), se descarta su resultado y se respeta que estuvo ausente.</p>
-      <input type="file" id="inputImportarInformePDF" accept="application/pdf" multiple>
-      <div id="importarInformeStatus" style="margin-top:8px;font-size:12.5px;"></div>
     </div>
   </section>
 
@@ -575,109 +606,35 @@
 /* ============================================================
    ROSTER — 5° "E"
 ============================================================ */
-// IMPORTANTE: cada estudiante tiene un id FIJO de por vida (S1, S2...),
-// asignado una sola vez aquí abajo. Este id NUNCA se recalcula por
-// posición en la lista, para que agregar o quitar estudiantes en medio
-// de la lista no cambie el id de nadie más (eso rompería el historial
-// de evaluaciones ya guardadas). El número de lista visible (num) sí se
-// recalcula siempre en orden alfabético — ver renumerarRoster().
-const ROSTER_BASE = [
+// Los identificadores (S1…S29) son internos y estables: los 28 primeros conservan
+// el mismo id de versiones anteriores (así no se mezclan los datos ya guardados);
+// la estudiante nueva es S29. La lista se ordena alfabéticamente por apellido
+// paterno, apellido materno y nombres, y el N.° de lista se asigna según ese orden.
+const NOMBRES_LISTA = [
 "Abner William Arias Quiroz","Viktor Valerio Bazán Durán","Dayana Melany Cadenillas Cachi",
 "Cinthya Liseth Calle Acuña","Helen Alisson Camacho Sánchez","Adriana Lucía Cerquín Cotrina",
 "Angie Jharren Chávez Rubio","Deysi Natali Cortez Huaccha","Yordan Andree Cusquisibán Chuquilín",
 "Erika Thamara Fernández Moreno","Franco Snayder Herrera Utani","Deysi Yhakelin Huingo Cueva",
 "Ian Larios Villar","Esmeralda Yamileth López Barboza","Jimena Saray López Cercado",
-"Ruth Jhamely López Rafael","Mikel Andre Marín Marín","Caleb Moisés Medina Huamán",
-"Logahn Jahilim Mendoza Mendoza","Illari Alejandra Orihuela Muñoz","Raj Nicolás Portal Linares",
-"Edwin Rodrigo Quito Lulayco","Mathias Jamir Silva Calua","María de los Ángeles Sulca Quispe",
-"Keyla Judith Terrones Infante","Dayvson Zuriel Vásquez Aguilar","Dominick Fabrizio Vásquez Portal",
-"Antoni Neymar Velásquez Bueno","Thamara Sarai Villanueva Jara"
-].map((name,i)=>({id:'S'+(i+1), name}));
-
-let ROSTER = ROSTER_BASE.slice();
-let rosterOverrides = { agregados: [], eliminadosIds: [] };
-
-// Convención peruana: se asume que las dos últimas palabras del nombre
-// completo son los apellidos, y se ordena alfabéticamente por ahí (igual
-// a como ya estaba ordenada manualmente la lista original).
-function apellidosParaOrden(nombreCompleto){
-  const palabras = nombreCompleto.trim().split(/\s+/);
-  if(palabras.length <= 2) return nombreCompleto.toLowerCase();
-  return palabras.slice(-2).join(' ').toLowerCase();
+"Mikel Andre Marín Marín","Caleb Moisés Medina Huamán","Logahn Jahilim Mendoza Mendoza",
+"Illari Alejandra Orihuela Muñoz","Raj Nicolás Portal Linares","Edwin Rodrigo Quito Lulayco",
+"Mathias Jamir Silva Calua","María de los Ángeles Sulca Quispe","Keyla Judith Terrones Infante",
+"Dayvson Zuriel Vásquez Aguilar","Dominick Fabrizio Vásquez Portal","Antoni Neymar Velásquez Bueno",
+"Thamara Sarai Villanueva Jara",
+"Ruth Jhamely López Rafael"
+];
+const _collator = new Intl.Collator('es', {sensitivity:'base'});
+function _claveApellidos(n){
+  const p = n.split(' ');
+  return { pat:p[p.length-2], mat:p[p.length-1], nom:p.slice(0,-2).join(' ') };
 }
-function compararEstudiantes(a, b){
-  return apellidosParaOrden(a.name).localeCompare(apellidosParaOrden(b.name), 'es')
-      || a.name.localeCompare(b.name, 'es');
-}
-// Recalcula el número de lista (num) de TODOS los estudiantes según el
-// orden alfabético actual. El id de cada uno nunca se toca aquí.
-function renumerarRoster(){
-  ROSTER.slice().sort(compararEstudiantes).forEach((s,i)=>{ s.num = i+1; });
-}
-function aplicarRosterOverrides(){
-  const base = ROSTER_BASE.filter(s => !rosterOverrides.eliminadosIds.includes(s.id));
-  ROSTER = base.concat(rosterOverrides.agregados);
-  ROSTER.forEach(s => { if(!(s.id in state.attendance)) state.attendance[s.id] = true; });
-  renumerarRoster();
-  const totalSpan = document.getElementById('totalRosterHoy');
-  if(totalSpan) totalSpan.textContent = ROSTER.length;
-}
-async function loadRosterOverrides(){
-  try{
-    const r = await storage.get('roster_overrides');
-    rosterOverrides = JSON.parse(r.value);
-    if(!Array.isArray(rosterOverrides.agregados)) rosterOverrides.agregados = [];
-    if(!Array.isArray(rosterOverrides.eliminadosIds)) rosterOverrides.eliminadosIds = [];
-  }catch(e){ rosterOverrides = { agregados: [], eliminadosIds: [] }; }
-  aplicarRosterOverrides();
-}
-async function saveRosterOverrides(){
-  try{ await storage.set('roster_overrides', JSON.stringify(rosterOverrides)); }catch(e){}
-}
-
-// Agrega un estudiante nuevo (recién matriculado). Se ubica solo en el
-// lugar alfabético que le corresponde y queda guardado para la próxima
-// vez que se abra la app.
-async function agregarEstudianteNuevo(nombreCompletoCrudo){
-  const nombre = nombreCompletoCrudo.trim().replace(/\s+/g,' ');
-  if(!nombre) return { ok:false, msg:'Escribe el nombre completo del estudiante.' };
-  if(ROSTER.some(s=>s.name.toLowerCase()===nombre.toLowerCase())){
-    return { ok:false, msg:'Ya existe un estudiante con ese nombre en la lista.' };
-  }
-  const nuevo = { id: 'S'+Date.now(), name: nombre };
-  rosterOverrides.agregados.push(nuevo);
-  await saveRosterOverrides();
-  aplicarRosterOverrides();
-  return { ok:true, estudiante: nuevo };
-}
-
-// Retira a un estudiante (por ejemplo, se dio de baja) y elimina TODO lo
-// que le pertenece: su lugar en la lista, su cola de pendientes y todo su
-// historial de evaluaciones ya guardadas.
-async function eliminarEstudianteYArchivos(id){
-  const est = ROSTER.find(s=>s.id===id);
-  if(!est) return { ok:false };
-
-  if(!rosterOverrides.eliminadosIds.includes(id)) rosterOverrides.eliminadosIds.push(id);
-  rosterOverrides.agregados = rosterOverrides.agregados.filter(s=>s.id!==id);
-  await saveRosterOverrides();
-
-  state.pending = state.pending.filter(p => p.id !== id);
-  await savePending();
-  state.lastSessionEvaluated = (state.lastSessionEvaluated||[]).filter(x=>x!==id);
-  await saveLastEvaluated();
-  delete state.attendance[id];
-
-  state.sessions.forEach(ses=>{
-    ses.evaluados = (ses.evaluados||[]).filter(ev=>ev.studentId!==id);
-    if(Array.isArray(ses.seleccionados)) ses.seleccionados = ses.seleccionados.filter(x=>x!==id);
-  });
-  state.sessions = state.sessions.filter(ses=>(ses.evaluados||[]).length>0);
-  await saveSessions();
-
-  aplicarRosterOverrides();
-  return { ok:true, nombre: est.name };
-}
+const ROSTER = NOMBRES_LISTA
+  .map((name,i)=>({id:'S'+(i+1), name}))
+  .sort((a,b)=>{
+    const x=_claveApellidos(a.name), y=_claveApellidos(b.name);
+    return _collator.compare(x.pat,y.pat) || _collator.compare(x.mat,y.mat) || _collator.compare(x.nom,y.nom);
+  })
+  .map((s,i)=>({id:s.id, name:s.name, num:i+1}));
 
 /* ============================================================
    STORAGE — funciona 100% offline, guardado directo en el
@@ -719,7 +676,8 @@ const storage = {
 ============================================================ */
 let state = {
   attendance: {},        // id -> true(present)/false(absent)
-  pending: [],            // array of student ids owing evaluation
+  pending: [],            // [{id,key,area,competencia,tema,fechaSesion}] pendiente de UNA evaluación concreta
+  filas: {},              // id -> 'A'|'B' (fila asignada, se reutiliza entre evaluaciones)
   lastSessionEvaluated: [], // ids evaluated in most recent session
   currentSession: null,   // in-progress session object
   sessions: []             // saved history
@@ -734,8 +692,14 @@ let fetchedCapacidades = [];
 async function loadPersisted(){
   try{
     const p = await storage.get('pending_evaluations');
-    state.pending = p ? JSON.parse(p.value) : [];
+    const arr = p ? JSON.parse(p.value) : [];
+    // Datos de versiones anteriores guardaban solo el id (pendiente permanente): se conservan como "sin detalle".
+    state.pending = arr.map(x => (typeof x === 'string') ? {id:x, legacy:true} : x);
   }catch(e){ state.pending = []; }
+  try{
+    const f = await storage.get('filas_asignadas');
+    state.filas = f ? JSON.parse(f.value) : {};
+  }catch(e){ state.filas = {}; }
   try{
     const l = await storage.get('last_session_evaluated');
     state.lastSessionEvaluated = l ? JSON.parse(l.value) : [];
@@ -747,6 +711,9 @@ async function loadPersisted(){
 }
 async function savePending(){
   try{ await storage.set('pending_evaluations', JSON.stringify(state.pending)); }catch(e){}
+}
+async function saveFilas(){
+  try{ await storage.set('filas_asignadas', JSON.stringify(state.filas)); }catch(e){}
 }
 async function saveLastEvaluated(){
   try{ await storage.set('last_session_evaluated', JSON.stringify(state.lastSessionEvaluated)); }catch(e){}
@@ -776,34 +743,22 @@ async function clearSessionProgress(){
 document.getElementById('tabs').addEventListener('click', (e)=>{
   const btn = e.target.closest('button[data-tab]');
   if(!btn) return;
-  document.querySelectorAll('#tabs button').forEach(b=>b.classList.remove('active'));
-  btn.classList.add('active');
-  ['sesion','evaluacion','pendientes','registro'].forEach(t=>{
-    document.getElementById('tab-'+t).style.display = (t===btn.dataset.tab) ? 'block' : 'none';
-  });
-  if(btn.dataset.tab==='pendientes') renderPending();
-  if(btn.dataset.tab==='registro') renderRegistro();
+  switchTab(btn.dataset.tab);
 });
 
 /* ============================================================
    ROSTER RENDER (attendance)
 ============================================================ */
-function rosterOrdenado(){
-  return ROSTER.slice().sort(compararEstudiantes);
-}
-
 function renderRoster(){
   const list = document.getElementById('rosterList');
   list.innerHTML = '';
-  rosterOrdenado().forEach(s=>{
+  ROSTER.forEach(s=>{
     const present = state.attendance[s.id];
-    const isPending = state.pending.some(p => p.id === s.id);
     const row = document.createElement('div');
     row.className = 'roster-row' + (present ? '' : ' absent');
     row.innerHTML = `
       <span class="num">${String(s.num).padStart(2,'0')}</span>
       <span class="name">${s.name}</span>
-      ${isPending ? '<span class="pending-tag">pendiente</span>' : ''}
       <label class="toggle-wrap">
         <input type="checkbox" data-id="${s.id}" ${present?'checked':''}>
         <span class="toggle-track"></span>
@@ -824,60 +779,22 @@ function updateAttendanceSummary(){
   const present = ROSTER.filter(s=>state.attendance[s.id]).length;
   document.getElementById('presentCount').textContent = present;
   document.getElementById('absentCount').textContent = ROSTER.length - present;
-  document.getElementById('pendingCount').textContent = new Set(state.pending.map(p=>p.id)).size;
+  renderAvisoPendientes();
 }
 
-/* ============================================================
-   GESTIÓN DE ESTUDIANTES — agregar (matrícula) / eliminar (retiro)
-============================================================ */
-function renderGestionEstudiantes(){
-  const box = document.getElementById('listaGestionEstudiantes');
-  box.innerHTML = rosterOrdenado().map(s=>`
-    <div class="roster-row">
-      <span class="num">${String(s.num).padStart(2,'0')}</span>
-      <span class="name">${s.name}</span>
-      <button type="button" class="btn outline small" data-eliminar-est="${s.id}" style="color:var(--danger,#b3261e);border-color:var(--danger,#b3261e);">🗑️ Retirar</button>
-    </div>
-  `).join('');
-  box.querySelectorAll('[data-eliminar-est]').forEach(btn=>{
-    btn.addEventListener('click', async ()=>{
-      const id = btn.dataset.eliminarEst;
-      const est = ROSTER.find(s=>s.id===id);
-      if(!est) return;
-      if(!confirm(`¿Retirar a "${est.name}" de la sección? Esto también eliminará permanentemente su cola de pendientes y TODO su historial de evaluaciones ya guardadas. Esta acción no se puede deshacer.`)) return;
-      const r = await eliminarEstudianteYArchivos(id);
-      if(r.ok){
-        renderRoster();
-        renderGestionEstudiantes();
-        renderPending();
-        renderRegistro();
-        const st = document.getElementById('gestionEstudiantesStatus');
-        st.innerHTML = `<span style="color:var(--good,#2e7d32);">✔ Se retiró a ${r.nombre} y se eliminó todo su historial guardado.</span>`;
-      }
-    });
-  });
+// Aviso solo para quien YA regresó (está presente hoy) y debe una evaluación concreta.
+function renderAvisoPendientes(){
+  const box = document.getElementById('avisoPendientes');
+  if(!box) return;
+  const items = state.pending.filter(p=>!p.legacy && state.attendance[p.id] && ROSTER.some(r=>r.id===p.id));
+  if(!items.length){ box.innerHTML=''; return; }
+  box.innerHTML = `<div class="aviso-pend"><b>🔔 Estos estudiantes faltaron y deben rendir su evaluación pendiente:</b><ul>` +
+    items.map(p=>{
+      const st = ROSTER.find(r=>r.id===p.id);
+      const f = (p.fechaSesion||'').split('-').reverse().join('/');
+      return `<li><b>${st.name}</b> — ${escapeAttr(p.area)} · ${escapeAttr(p.tema)}${f?' ('+f+')':''}</li>`;
+    }).join('') + `</ul><span style="font-size:12px;color:var(--ink-soft);">Ábrela desde la pestaña "Pendientes". El aviso desaparece cuando la rinda.</span></div>`;
 }
-
-document.getElementById('toggleGestionEstudiantes').addEventListener('click', ()=>{
-  const box = document.getElementById('gestionEstudiantesBox');
-  const abierto = box.style.display !== 'none';
-  box.style.display = abierto ? 'none' : 'block';
-  if(!abierto) renderGestionEstudiantes();
-});
-
-document.getElementById('btnAgregarEstudiante').addEventListener('click', async ()=>{
-  const input = document.getElementById('inputNuevoEstudiante');
-  const st = document.getElementById('gestionEstudiantesStatus');
-  const r = await agregarEstudianteNuevo(input.value);
-  if(!r.ok){
-    st.innerHTML = `<span style="color:var(--danger,#b3261e);">${r.msg}</span>`;
-    return;
-  }
-  input.value = '';
-  st.innerHTML = `<span style="color:var(--good,#2e7d32);">✔ Se agregó a ${r.estudiante.name} en el N.° ${String(r.estudiante.num).padStart(2,'0')} de la lista.</span>`;
-  renderRoster();
-  renderGestionEstudiantes();
-});
 
 /* ============================================================
    COMPETENCIAS OFICIALES (CNEB - Currículo Nacional Perú)
@@ -986,123 +903,123 @@ async function checkAndResetAttendanceForNewDay(){
 }
 
 /* ============================================================
-   ESTÁNDARES OFICIALES MINEDU — V CICLO (5.°/6.° grado primaria)
+   ESTÁNDARES OFICIALES MINEDU — VI CICLO (5.°/6.° grado primaria)
    Fuente: Currículo Nacional de la Educación Básica (CNEB) y
    Programa Curricular de Educación Primaria, MINEDU 2016.
    Cargados localmente para que la app funcione SIN internet.
 ============================================================ */
 const MINEDU_ESTANDARES = {
 "Resuelve problemas de cantidad": {
-  estandar:"Resuelve problemas referidos a una o más acciones de comparar, igualar, repetir o repartir cantidades, partir y repartir una cantidad en partes iguales; las traduce a expresiones aditivas, multiplicativas y la potenciación cuadrada y cúbica; así como a expresiones de adición, sustracción y multiplicación con fracciones y decimales (hasta el centésimo). Expresa su comprensión del sistema de numeración decimal con números naturales hasta seis cifras, de divisores y múltiplos, y del valor posicional de los números decimales hasta los centésimos; con lenguaje numérico y representaciones diversas. Representa de diversas formas su comprensión de la noción de fracción como operador y como cociente, así como las equivalencias entre decimales, fracciones o porcentajes usuales. Selecciona y emplea estrategias diversas, el cálculo mental o escrito para operar con números naturales, fracciones, decimales y porcentajes de manera exacta o aproximada; así como para hacer conversiones de unidades de medida de masa, tiempo y temperatura, y medir de manera exacta o aproximada usando la unidad pertinente. Justifica sus procesos de resolución así como sus afirmaciones sobre las relaciones entre las cuatro operaciones y sus propiedades, basándose en ejemplos y sus conocimientos matemáticos.",
-  fuente:"CNEB - Programa Curricular de Educación Primaria, MINEDU 2016, V ciclo",
+  estandar:"Traduce datos y relaciones de una situación a expresiones numéricas con las cuatro operaciones, fracciones, decimales, potencias y porcentajes; comprueba si su expresión representa las condiciones del problema y explica el valor posicional hasta millones.",
+  fuente:"CNEB - Programa Curricular de Educación Primaria, MINEDU 2016, VI ciclo",
   capacidades:["Traduce cantidades a expresiones numéricas","Comunica su comprensión sobre los números y las operaciones","Usa estrategias y procedimientos de estimación y cálculo","Argumenta afirmaciones sobre las relaciones numéricas y las operaciones"],
   rubrica:{C:"Necesita apoyo constante para relacionar los datos de un problema con una operación adecuada.",B:"Traduce problemas sencillos a operaciones básicas, con errores al usar fracciones, decimales o porcentajes.",A:"Traduce con autonomía situaciones cotidianas a expresiones numéricas con las cuatro operaciones, fracciones, decimales y porcentajes, y verifica sus resultados.",AD:"Además de resolver con autonomía, propone distintas formas de representar y comprobar resultados, argumentando con seguridad."}
 },
 "Resuelve problemas de regularidad, equivalencia y cambio": {
-  estandar:"Resuelve problemas de equivalencias, regularidades o relaciones de cambio entre dos magnitudes o entre expresiones; traduciéndolas a ecuaciones que combinan las cuatro operaciones, a expresiones de desigualdad o a relaciones de proporcionalidad directa, y patrones de repetición que combinan criterios geométricos y cuya regla de formación se asocia a la posición de sus elementos. Expresa su comprensión del término general de un patrón, las condiciones de desigualdad expresadas con los signos > y <, así como de la relación proporcional como un cambio constante; usando lenguaje matemático y diversas representaciones. Emplea recursos, estrategias y propiedades de las igualdades para resolver ecuaciones o hallar valores que cumplen una condición de desigualdad o proporcionalidad; así como procedimientos para crear, continuar o completar patrones. Realiza afirmaciones a partir de sus experiencias concretas, sobre patrones y sus elementos no inmediatos; las justifica con ejemplos, procedimientos, y propiedades de la igualdad y desigualdad.",
-  fuente:"CNEB - Programa Curricular de Educación Primaria, MINEDU 2016, V ciclo",
+  estandar:"Establece relaciones entre datos, valores desconocidos y equivalencias, generaliza cómo continúa una regla de formación numérica o geométrica, y expresa su comprensión mediante lenguaje algebraico, ecuaciones y gráficos.",
+  fuente:"CNEB - Programa Curricular de Educación Primaria, MINEDU 2016, VI ciclo",
   capacidades:["Traduce datos y condiciones a expresiones algebraicas","Comunica su comprensión sobre las relaciones algebraicas","Usa estrategias y procedimientos para encontrar reglas generales","Argumenta afirmaciones sobre relaciones de cambio y equivalencia"],
   rubrica:{C:"Identifica patrones simples solo con ejemplos concretos y ayuda del docente.",B:"Reconoce y continúa patrones numéricos sencillos, con dificultad para generalizar con lenguaje algebraico.",A:"Identifica y generaliza patrones numéricos y geométricos, expresándolos mediante ecuaciones o gráficos con autonomía.",AD:"Generaliza patrones complejos, los representa de varias formas y argumenta la equivalencia entre expresiones algebraicas."}
 },
 "Resuelve problemas de forma, movimiento y localización": {
-  estandar:"Resuelve problemas en los que modela las características y la ubicación de objetos a formas bidimensionales y tridimensionales, sus propiedades, su ampliación, reducción o rotación. Describe y clasifica prismas rectos, cuadriláteros, triángulos, círculos, por sus elementos: vértices, lados, caras, ángulos, y por sus propiedades; usando lenguaje geométrico. Realiza giros en cuartos y medias vueltas, traslaciones, ampliación y reducción de formas bidimensionales, en el plano cartesiano. Describe recorridos y ubicaciones en planos. Emplea procedimientos e instrumentos para ampliar, reducir, girar y construir formas; así como para estimar o medir la longitud, superficie y capacidad de los objetos, seleccionando la unidad de medida convencional apropiada y realizando conversiones. Explica sus afirmaciones sobre relaciones entre elementos de las formas geométricas y sus atributos medibles, con ejemplos concretos y propiedades.",
-  fuente:"CNEB - Programa Curricular de Educación Primaria, MINEDU 2016, V ciclo",
+  estandar:"Describe las características y atributos medibles de objetos, los relaciona con formas bidimensionales y tridimensionales, resuelve problemas de perímetro, área y volumen, y describe la ubicación de objetos usando coordenadas, planos o mapas a escala.",
+  fuente:"CNEB - Programa Curricular de Educación Primaria, MINEDU 2016, VI ciclo",
   capacidades:["Modela objetos con formas geométricas y sus transformaciones","Comunica su comprensión sobre las formas y relaciones geométricas","Usa estrategias y procedimientos para medir y orientarse en el espacio","Argumenta afirmaciones sobre relaciones geométricas"],
   rubrica:{C:"Reconoce formas geométricas básicas pero requiere apoyo para calcular perímetro o área.",B:"Calcula perímetro y área de figuras simples y ubica objetos en un plano con ayuda ocasional.",A:"Resuelve con autonomía problemas de perímetro, área y volumen de figuras compuestas, y ubica objetos con coordenadas.",AD:"Resuelve problemas geométricos complejos, argumenta relaciones de semejanza y usa coordenadas y escalas con precisión."}
 },
 "Resuelve problemas de gestión de datos e incertidumbre": {
-  estandar:"Resuelve problemas relacionados con temas de estudio, en los que reconoce variables cualitativas o cuantitativas discretas, recolecta datos a través de encuestas y de diversas fuentes de información. Selecciona tablas de doble entrada, gráficos de barras dobles y gráficos de líneas, seleccionando el más adecuado para representar los datos. Usa el significado de la moda para interpretar información contenida en gráficos y en diversas fuentes de información. Realiza experimentos aleatorios, reconoce sus posibles resultados y expresa la probabilidad de un evento relacionando el número de casos favorables y el total de casos posibles. Elabora y justifica predicciones, decisiones y conclusiones, basándose en la información obtenida en el análisis de datos o en la probabilidad de un evento.",
-  fuente:"CNEB - Programa Curricular de Educación Primaria, MINEDU 2016, V ciclo",
+  estandar:"Recopila y organiza datos de una población en estudio, los representa mediante tablas y gráficos con medidas de tendencia central, y determina la probabilidad de sucesos en situaciones aleatorias sencillas.",
+  fuente:"CNEB - Programa Curricular de Educación Primaria, MINEDU 2016, VI ciclo",
   capacidades:["Representa datos con gráficos y medidas estadísticas","Comunica su comprensión de conceptos estadísticos y probabilísticos","Usa estrategias y procedimientos para recopilar y procesar datos","Sustenta conclusiones basadas en la información obtenida"],
   rubrica:{C:"Organiza datos simples en tablas solo con apoyo directo del docente.",B:"Recolecta y representa datos en gráficos de barras sencillos, con dificultad al calcular media o moda.",A:"Organiza, representa e interpreta datos en distintos gráficos y calcula medidas de tendencia central con autonomía.",AD:"Interpreta y compara conjuntos de datos, calcula probabilidades y argumenta conclusiones basadas en la información."}
 },
 "Se comunica oralmente en su lengua materna": {
-  estandar:"Se comunica oralmente mediante diversos tipos de textos; infiere el tema, propósito, hechos y conclusiones a partir de información explícita, e interpreta la intención del interlocutor en discursos que contienen ironías. Se expresa adecuándose a situaciones comunicativas formales e informales. Organiza y desarrolla sus ideas en torno a un tema y las relaciona mediante el uso de conectores y algunos referentes, así como de un vocabulario variado y pertinente. Usa recursos no verbales y paraverbales para enfatizar lo que dice. Reflexiona y evalúa los textos escuchados a partir de sus conocimientos y el contexto sociocultural. En un intercambio, hace preguntas y contribuciones relevantes que responden a las ideas y puntos de vista de otros, enriqueciendo el tema tratado.",
-  fuente:"CNEB - Programa Curricular de Educación Primaria, MINEDU 2016, V ciclo",
+  estandar:"Expresa sus ideas organizando el contenido según su propósito, adecúa su texto oral al oyente y contexto, usa vocabulario variado y recursos no verbales, y evalúa lo dicho por él y por otros.",
+  fuente:"CNEB - Programa Curricular de Educación Primaria, MINEDU 2016, VI ciclo",
   capacidades:["Obtiene información de textos orales","Infiere e interpreta información del texto oral","Adecúa, organiza y desarrolla el texto oral","Utiliza recursos no verbales y paraverbales","Interactúa estratégicamente con distintos interlocutores","Reflexiona y evalúa la forma, contenido y contexto del texto oral"],
   rubrica:{C:"Se expresa con ideas sueltas y poco organizadas, requiere apoyo para mantener el tema.",B:"Organiza sus ideas en torno a un tema, con vocabulario limitado y pocos recursos de apoyo.",A:"Se expresa con claridad y coherencia, adecúa su lenguaje al oyente y usa recursos no verbales pertinentes.",AD:"Se expresa con fluidez y argumentos sólidos, adapta su discurso a diferentes situaciones y evalúa críticamente su comunicación."}
 },
 "Lee diversos tipos de textos escritos en su lengua materna": {
-  estandar:"Lee diversos tipos de textos con varios elementos complejos en su estructura y con vocabulario variado. Obtiene información e integra datos que están en distintas partes del texto. Realiza inferencias locales a partir de información explícita e implícita. Interpreta el texto considerando información relevante y complementaria para construir su sentido global. Reflexiona sobre aspectos variados del texto a partir de su conocimiento y experiencia. Evalúa el uso del lenguaje, la intención de los recursos textuales y el efecto del texto en el lector a partir de su conocimiento y del contexto sociocultural.",
-  fuente:"CNEB - Programa Curricular de Educación Primaria, MINEDU 2016, V ciclo",
+  estandar:"Obtiene información explícita e infiere el significado de textos de estructura compleja, integra información para construir el sentido global, y opina sobre el contenido y los recursos textuales.",
+  fuente:"CNEB - Programa Curricular de Educación Primaria, MINEDU 2016, VI ciclo",
   capacidades:["Obtiene información del texto escrito","Infiere e interpreta información del texto","Reflexiona y evalúa la forma, el contenido y contexto del texto"],
   rubrica:{C:"Identifica información explícita sencilla, con dificultad para inferir ideas no dichas directamente.",B:"Comprende información explícita y realiza inferencias simples en textos de estructura básica.",A:"Infiere el significado de textos de estructura compleja y opina sobre su contenido con argumentos.",AD:"Interpreta textos complejos con distintos propósitos, evalúa críticamente su contenido y forma, y contrasta fuentes."}
 },
 "Escribe diversos tipos de textos en su lengua materna": {
-  estandar:"Escribe diversos tipos de textos de forma reflexiva. Adecúa su texto al destinatario, propósito y el registro, a partir de su experiencia previa y de algunas fuentes de información complementarias. Organiza y desarrolla lógicamente las ideas en torno a un tema y las estructura en párrafos. Establece relaciones entre ideas a través del uso adecuado de algunos tipos de conectores y de referentes; emplea vocabulario variado. Utiliza recursos ortográficos para separar expresiones, ideas y párrafos con la intención de darle claridad y sentido a su texto. Reflexiona y evalúa de manera permanente la coherencia y cohesión de las ideas en el texto que escribe, así como el uso del lenguaje para argumentar o reforzar sentidos y producir efectos en el lector según la situación comunicativa.",
-  fuente:"CNEB - Programa Curricular de Educación Primaria, MINEDU 2016, V ciclo",
+  estandar:"Adecúa su texto al destinatario, propósito y registro, organiza y desarrolla ideas en torno a un tema evitando digresiones, usa conectores y recursos gramaticales apropiados, y revisa su texto para mejorarlo.",
+  fuente:"CNEB - Programa Curricular de Educación Primaria, MINEDU 2016, VI ciclo",
   capacidades:["Adecúa el texto a la situación comunicativa","Organiza y desarrolla las ideas de forma coherente y cohesionada","Utiliza convenciones del lenguaje escrito","Reflexiona y evalúa la forma, contenido y contexto del texto escrito"],
   rubrica:{C:"Escribe ideas sueltas, con poca organización y errores frecuentes de ortografía.",B:"Escribe textos breves con una idea central, con conectores limitados y algunos errores.",A:"Escribe textos organizados y coherentes, con vocabulario variado y uso adecuado de conectores y ortografía.",AD:"Escribe textos complejos y bien estructurados, revisa y mejora su propio texto, dominando el lenguaje escrito."}
 },
 "Construye su identidad": {
-  estandar:"Construye su identidad al tomar conciencia de los aspectos que lo hacen único, cuando se reconoce a sí mismo a partir de sus características personales, sus capacidades y limitaciones reconociendo el papel de las familias en la formación de dichas características. Aprecia su pertenencia cultural a un país diverso. Explica las causas y consecuencias de sus emociones, y utiliza estrategias para regularlas. Manifiesta su punto de vista frente a situaciones de conflicto moral, en función de cómo estas le afectan a él o a los demás. Examina sus acciones en situaciones de conflicto moral que se presentan en la vida cotidiana y se plantea comportamientos que tomen en cuenta principios éticos. Establece relaciones de igualdad entre hombres y mujeres, y explica su importancia. Crea vínculos afectivos positivos y se sobrepone cuando estos cambian. Identifica conductas para protegerse de situaciones que ponen en riesgo su integridad en relación a su sexualidad.",
-  fuente:"CNEB - Programa Curricular de Educación Primaria, MINEDU 2016, V ciclo",
+  estandar:"Se valora a sí mismo reconociendo sus características, cualidades, limitaciones y cambios propios de su edad, se relaciona con los demás con igualdad, autorregula sus emociones y actúa con autonomía cuidando su bienestar.",
+  fuente:"CNEB - Programa Curricular de Educación Primaria, MINEDU 2016, VI ciclo",
   capacidades:["Se valora a sí mismo","Autorregula sus emociones","Reflexiona y argumenta éticamente","Vive su sexualidad de manera integral"],
   rubrica:{C:"Reconoce algunas de sus características personales solo con apoyo del docente.",B:"Identifica sus cualidades y cambios propios de su edad, con dificultad para autorregular sus emociones en conflictos.",A:"Se reconoce y valora a sí mismo, se relaciona con igualdad y autorregula sus emociones en la mayoría de situaciones.",AD:"Actúa con autonomía y seguridad, autorregula sus emociones en situaciones difíciles y fortalece su identidad."}
 },
 "Convive y participa democráticamente en la búsqueda del bien común": {
-  estandar:"Convive y participa democráticamente cuando se relaciona con los demás, respetando las diferencias, los derechos de cada uno, cumpliendo y evaluando sus deberes. Se interesa por relacionarse con personas de culturas distintas y conocer sus costumbres. Construye y evalúa normas de convivencia tomando en cuenta sus derechos. Maneja conflictos utilizando el diálogo y la mediación con base en criterios de igualdad o equidad. Propone, planifica y realiza acciones colectivas orientadas al bien común, la solidaridad, la protección de las personas vulnerables y la defensa de sus derechos. Delibera sobre asuntos de interés público con argumentos basados en fuentes y toma en cuenta la opinión de los demás.",
-  fuente:"CNEB - Programa Curricular de Educación Primaria, MINEDU 2016, V ciclo",
+  estandar:"Se relaciona con los demás respetando las diferencias, cumple con sus responsabilidades, construye y evalúa junto a sus compañeros las normas de convivencia, y participa en acciones orientadas al bien común.",
+  fuente:"CNEB - Programa Curricular de Educación Primaria, MINEDU 2016, VI ciclo",
   capacidades:["Interactúa con todas las personas","Construye normas y asume acuerdos y leyes","Maneja conflictos de manera constructiva","Delibera sobre asuntos públicos","Participa en acciones que promueven el bienestar común"],
   rubrica:{C:"Requiere recordatorios frecuentes para respetar normas básicas de convivencia.",B:"Cumple con sus responsabilidades y respeta las diferencias en la mayoría de situaciones.",A:"Convive respetando las diferencias, cumple y evalúa sus responsabilidades, y participa en la construcción de normas.",AD:"Propone y lidera acciones colectivas orientadas al bien común, y delibera sobre asuntos públicos con argumentos."}
 },
 "Construye interpretaciones históricas": {
-  estandar:"Construye interpretaciones históricas en las que explica, de manera general, procesos históricos peruanos, empleando algunas categorías temporales. Identifica las causas inmediatas y lejanas que desencadenaron dichos procesos, así como las consecuencias cuyos efectos se ven de inmediato o a largo plazo. Ordena cronológicamente procesos históricos peruanos y describe algunos cambios, permanencias y simultaneidades producidos en ellos. Utiliza información de diversas fuentes a partir de identificar su origen y distinguiendo algunas diferencias entre las versiones que dan sobre los procesos históricos.",
-  fuente:"CNEB - Programa Curricular de Educación Primaria, MINEDU 2016, V ciclo",
+  estandar:"Explica procesos históricos del Perú y el mundo a partir de la clasificación de sus causas y consecuencias, distingue entre diferentes fuentes históricas, y usa términos y referentes de tiempo para explicar cambios y permanencias.",
+  fuente:"CNEB - Programa Curricular de Educación Primaria, MINEDU 2016, VI ciclo",
   capacidades:["Interpreta críticamente fuentes diversas","Comprende el tiempo histórico","Explica y argumenta procesos históricos"],
   rubrica:{C:"Ubica hechos históricos sencillos en una línea de tiempo con apoyo constante.",B:"Reconoce causas y consecuencias básicas de un proceso histórico, con dificultad para usar fuentes diversas.",A:"Explica procesos históricos identificando causas y consecuencias, y usa distintas fuentes con autonomía.",AD:"Compara e interpreta críticamente diversas fuentes históricas y argumenta relaciones entre cambios y permanencias."}
 },
 "Gestiona responsablemente el espacio y el ambiente": {
-  estandar:"Gestiona responsablemente el espacio y ambiente al realizar frecuentemente actividades para su cuidado y al disminuir los factores de vulnerabilidad frente al cambio climático y a los riesgos de desastres en su escuela. Utiliza distintas fuentes y herramientas cartográficas y socioculturales para ubicar elementos en el espacio geográfico y el ambiente, y compara estos espacios a diferentes escalas considerando la acción de los actores sociales. Explica las problemáticas ambientales y territoriales a partir de sus causas, consecuencias y sus manifestaciones a diversas escalas.",
-  fuente:"CNEB - Programa Curricular de Educación Primaria, MINEDU 2016, V ciclo",
+  estandar:"Explica las relaciones entre los elementos naturales y sociales del espacio geográfico, evalúa problemáticas ambientales y territoriales, y participa en acciones de cuidado del ambiente y prevención de riesgos de desastre.",
+  fuente:"CNEB - Programa Curricular de Educación Primaria, MINEDU 2016, VI ciclo",
   capacidades:["Comprende las relaciones entre los elementos naturales y sociales","Maneja fuentes de información para comprender el espacio geográfico","Genera acciones para conservar el ambiente local y global"],
   rubrica:{C:"Identifica algunos elementos del espacio geográfico cercano con apoyo del docente.",B:"Explica relaciones simples entre elementos naturales y sociales de su localidad.",A:"Explica problemáticas ambientales de su entorno y propone acciones de cuidado del ambiente con autonomía.",AD:"Evalúa críticamente problemáticas territoriales y ambientales, y lidera acciones de prevención y cuidado."}
 },
 "Gestiona responsablemente los recursos económicos": {
-  estandar:"Gestiona responsablemente los recursos económicos al utilizar el dinero y otros recursos como consumidor informado y al realizar acciones de ahorro, inversión y cuidado de ellos. Explica el papel de la publicidad frente a las decisiones de consumo y en la planificación de los presupuestos personales y familiares, así como la importancia de cumplir con el pago de impuestos, tributos y deudas como medio para el bienestar común. Explica los roles que cumplen las empresas y el Estado respecto a la satisfacción de las necesidades económicas y financieras de las personas.",
-  fuente:"CNEB - Programa Curricular de Educación Primaria, MINEDU 2016, V ciclo",
+  estandar:"Comprende las relaciones entre los elementos del sistema económico y financiero, toma conciencia de que los recursos son escasos, y administra los recursos propios y familiares tomando decisiones informadas.",
+  fuente:"CNEB - Programa Curricular de Educación Primaria, MINEDU 2016, VI ciclo",
   capacidades:["Comprende las relaciones entre los elementos del sistema económico y financiero","Toma decisiones económicas y financieras"],
   rubrica:{C:"Reconoce que el dinero sirve para comprar cosas, sin identificar relaciones más amplias.",B:"Explica de forma sencilla el origen de los recursos familiares y la necesidad de administrarlos.",A:"Comprende las relaciones económicas básicas y toma decisiones responsables sobre sus propios recursos.",AD:"Analiza críticamente el sistema económico y financiero y propone decisiones informadas para el bienestar familiar."}
 },
 "Indaga mediante métodos científicos para construir sus conocimientos": {
-  estandar:"Indaga las causas o describe un objeto o fenómeno que identifica para formular preguntas e hipótesis en las que relaciona las variables que intervienen y que se pueden observar. Propone estrategias para observar o generar una situación controlada en la cual registra evidencias de cómo una variable independiente afecta a otra dependiente. Establece relaciones entre los datos, los interpreta y los contrasta con información confiable. Evalúa y comunica sus conclusiones y procedimientos.",
-  fuente:"CNEB - Programa Curricular de Educación Primaria, MINEDU 2016, V ciclo",
+  estandar:"Formula preguntas e hipótesis, propone y ejecuta procedimientos para observar, medir y comparar información, y comunica sus conclusiones evaluando si confirman o refutan su hipótesis inicial.",
+  fuente:"CNEB - Programa Curricular de Educación Primaria, MINEDU 2016, VI ciclo",
   capacidades:["Problematiza situaciones","Diseña estrategias para hacer indagación","Genera y registra datos e información","Analiza datos e información","Evalúa y comunica el proceso y resultados de su indagación"],
   rubrica:{C:"Observa fenómenos simples pero necesita apoyo para formular preguntas o hipótesis.",B:"Formula preguntas sencillas y ejecuta procedimientos básicos de observación con ayuda del docente.",A:"Formula hipótesis, diseña y ejecuta procedimientos de indagación, y comunica sus conclusiones con autonomía.",AD:"Diseña indagaciones rigurosas, contrasta resultados con fuentes confiables y argumenta sus conclusiones científicas."}
 },
 "Explica el mundo físico basándose en conocimientos sobre los seres vivos, materia y energía, biodiversidad, Tierra y universo": {
-  estandar:"Explica, con base en evidencia con respaldo científico, las relaciones entre: propiedades o funciones macroscópicas de los cuerpos, materiales o seres vivos con su estructura y movimiento microscópico; la reproducción sexual con la diversidad genética; los ecosistemas con la diversidad de especies; el relieve con la actividad interna de la Tierra. Relaciona el descubrimiento científico o la innovación tecnológica con sus impactos. Justifica su posición frente a situaciones controversiales sobre el uso de la tecnología y el saber científico.",
-  fuente:"CNEB - Programa Curricular de Educación Primaria, MINEDU 2016, V ciclo",
+  estandar:"Compara las características de los seres vivos, la materia y la energía, explica las relaciones entre estos y su ambiente, y justifica sus explicaciones con evidencia y conocimientos científicos.",
+  fuente:"CNEB - Programa Curricular de Educación Primaria, MINEDU 2016, VI ciclo",
   capacidades:["Comprende y usa conocimientos sobre los seres vivos, materia y energía, biodiversidad, Tierra y universo","Evalúa las implicancias del saber y quehacer científico y tecnológico"],
   rubrica:{C:"Describe características básicas de los seres vivos sin relacionarlas con su ambiente.",B:"Explica relaciones sencillas entre los seres vivos y su ambiente con apoyo.",A:"Explica con sus propias palabras relaciones entre materia, energía, seres vivos y ambiente, apoyándose en evidencia.",AD:"Argumenta explicaciones científicas complejas sobre el mundo físico, contrastando evidencia de diversas fuentes."}
 },
 "Diseña y construye soluciones tecnológicas para resolver problemas de su entorno": {
-  estandar:"Diseña y construye soluciones tecnológicas al identificar las causas que generan problemas tecnológicos y propone alternativas de solución con base en conocimientos científicos. Representa una de ellas incluyendo sus partes o etapas, a través de esquemas o dibujos estructurados. Establece características de forma, estructura y función y explica el procedimiento, los recursos de implementación; los ejecuta usando herramientas y materiales seleccionados; verifica el funcionamiento de la solución tecnológica detectando imprecisiones y realiza ajustes para mejorarlo. Explica el procedimiento, conocimiento científico aplicado y limitaciones de la solución tecnológica. Evalúa su funcionamiento a través de pruebas considerando los requerimientos establecidos y propone mejoras. Infiere impactos de la solución tecnológica.",
-  fuente:"CNEB - Programa Curricular de Educación Primaria, MINEDU 2016, V ciclo",
+  estandar:"Determina un problema tecnológico y sus causas, diseña una alternativa de solución con conocimientos científicos o prácticos, construye su solución y evalúa comprobando su funcionamiento.",
+  fuente:"CNEB - Programa Curricular de Educación Primaria, MINEDU 2016, VI ciclo",
   capacidades:["Determina una alternativa de solución tecnológica","Diseña la alternativa de solución tecnológica","Implementa y valida la alternativa de solución tecnológica","Evalúa y comunica el funcionamiento de su solución tecnológica"],
   rubrica:{C:"Identifica problemas simples de su entorno con apoyo directo del docente.",B:"Propone soluciones tecnológicas sencillas, con dificultad para justificar su diseño.",A:"Diseña, construye y evalúa soluciones tecnológicas que responden a problemas de su entorno.",AD:"Diseña soluciones tecnológicas innovadoras, las evalúa críticamente y propone mejoras fundamentadas."}
 },
 "Aprecia de manera crítica manifestaciones artístico-culturales": {
-  estandar:"Aprecia de manera crítica manifestaciones artístico-culturales al interpretar las cualidades expresivas de los elementos del arte, la estructura y los medios utilizados en una manifestación artístico-cultural y explica cómo transmite mensajes, ideas y sentimientos. Investiga los contextos donde se originan manifestaciones artístico-culturales tradicionales y contemporáneas e identifica cómo los cambios, las tradiciones, las creencias y los valores revelan la manera en que una determinada persona o sociedad ha vivido. Genera hipótesis sobre el significado y las diversas intenciones que puede tener una manifestación creada en contextos históricos y culturales diferentes.",
-  fuente:"CNEB - Programa Curricular de Educación Primaria, MINEDU 2016, V ciclo",
+  estandar:"Percibe manifestaciones artístico-culturales de su entorno y de otras culturas, describe las ideas y emociones que le transmiten, y las relaciona con su contexto de creación emitiendo una opinión personal.",
+  fuente:"CNEB - Programa Curricular de Educación Primaria, MINEDU 2016, VI ciclo",
   capacidades:["Percibe manifestaciones artístico-culturales","Contextualiza las manifestaciones artístico-culturales","Reflexiona creativa y críticamente"],
   rubrica:{C:"Observa manifestaciones artísticas simples sin expresar una opinión propia.",B:"Describe lo que observa en una obra artística con apoyo, con dificultad para relacionarla con su contexto.",A:"Describe y relaciona manifestaciones artístico-culturales con su contexto, emitiendo una opinión fundamentada.",AD:"Analiza críticamente manifestaciones artísticas de diversas culturas y argumenta con solidez su apreciación."}
 },
 "Crea proyectos desde los lenguajes artísticos": {
-  estandar:"Crea proyectos artísticos individuales o colaborativos explorando formas alternativas de combinar y usar elementos, medios, materiales y técnicas artísticas y tecnologías para la resolución de problemas creativos. Genera ideas investigando una variedad de fuentes y manipulando los elementos de los diversos lenguajes de las artes (danza, música, teatro, artes visuales) para evaluar cuáles se ajustan mejor a sus intenciones. Planifica y produce trabajos que comunican ideas y experiencias personales y sociales e incorpora influencias de su propia comunidad y de otras culturas. Registra sus procesos, identifica los aspectos esenciales de sus trabajos y los va modificando para mejorarlos. Planifica los espacios de presentación considerando sus intenciones y presenta sus descubrimientos y creaciones a una variedad de audiencias. Evalúa si logra sus intenciones de manera efectiva.",
-  fuente:"CNEB - Programa Curricular de Educación Primaria, MINEDU 2016, V ciclo",
+  estandar:"Explora y experimenta lenguajes del arte, combina elementos visuales, sonoros o kinestésicos para transmitir ideas, y aplica procesos creativos siguiendo intenciones expresivas propias.",
+  fuente:"CNEB - Programa Curricular de Educación Primaria, MINEDU 2016, VI ciclo",
   capacidades:["Explora y experimenta los lenguajes del arte","Aplica procesos creativos","Evalúa y socializa sus procesos y proyectos"],
   rubrica:{C:"Explora materiales artísticos de forma libre, sin una intención expresiva clara.",B:"Combina elementos artísticos sencillos para expresar una idea, con apoyo del docente.",A:"Crea proyectos artísticos con intención expresiva propia, combinando distintos elementos y lenguajes.",AD:"Crea proyectos artísticos originales y complejos, y fundamenta las decisiones creativas que tomó."}
 },
 "Construye su identidad como persona humana, amada por Dios, digna, libre y trascendente": {
-  estandar:"Comprende el amor de Dios desde la creación respetando la dignidad y la libertad de la persona humana. Explica la acción de Dios presente en el Plan de Salvación. Demuestra su amor a Dios y al prójimo participando en su comunidad y realizando obras de caridad que le ayudan en su crecimiento personal y espiritual. Fomenta una convivencia cristiana basada en el diálogo, el respeto, la tolerancia y el amor fraterno fortaleciendo su identidad como hijo de Dios.",
-  fuente:"Programa Curricular de Educación Primaria, MINEDU 2016 - Educación Religiosa, V ciclo",
+  estandar:"Conoce y valora su dignidad como persona amada por Dios, relaciona su experiencia personal con la vida de Jesús y los valores del Evangelio, y actúa de acuerdo con su fe en su vida cotidiana.",
+  fuente:"Programa Curricular de Educación Primaria, MINEDU 2016 - Educación Religiosa, VI ciclo",
   capacidades:["Conoce a Dios y asume su identidad religiosa y espiritual como persona digna, libre y trascendente"],
   rubrica:{C:"Reconoce que Dios lo ama, pero le cuesta relacionarlo con su vida diaria.",B:"Relaciona algunos valores del Evangelio con situaciones sencillas de su vida cotidiana.",A:"Reconoce y valora su dignidad como persona amada por Dios y actúa según los valores del Evangelio.",AD:"Vive de manera coherente su fe, relacionando con profundidad los valores del Evangelio con sus decisiones diarias."}
 },
 "Asume la experiencia del encuentro personal y comunitario con Dios en su proyecto de vida en coherencia con su creencia religiosa": {
-  estandar:"Expresa coherencia entre lo que cree, dice y hace en su compromiso personal a la luz de textos bíblicos. Comprende su dimensión religiosa, espiritual y trascendente que le permita asumir cambios de comportamiento en diversos contextos a la luz del Evangelio. Interioriza la presencia de Dios viviendo el encuentro personal y comunitario, para colaborar en la construcción de una comunidad de fe guiada por las enseñanzas de Jesucristo. Asume su rol protagónico mediante actitudes concretas a imagen de Jesucristo y colabora en el cambio que necesita la sociedad.",
-  fuente:"Programa Curricular de Educación Primaria, MINEDU 2016 - Educación Religiosa, V ciclo",
+  estandar:"Cultiva y expresa su experiencia de encuentro con Dios en su vida personal y comunitaria, participa de la vida de su comunidad de fe, y da razón de sus creencias con respeto hacia otras manifestaciones religiosas.",
+  fuente:"Programa Curricular de Educación Primaria, MINEDU 2016 - Educación Religiosa, VI ciclo",
   capacidades:["Cultiva y expresa su fe de modo comprensible y respetuoso, participando en su comunidad de fe"],
   rubrica:{C:"Participa de actividades religiosas sin comprender su significado.",B:"Reconoce el sentido de algunas prácticas de su comunidad de fe, con apoyo del docente.",A:"Participa activamente en su comunidad de fe y expresa el sentido de su experiencia religiosa con sus propias palabras.",AD:"Da razón fundamentada de su fe, respeta otras creencias, y vive coherentemente su experiencia religiosa."}
 }
@@ -1118,11 +1035,65 @@ function setError(msg){
 }
 
 /* ============================================================
+   MICROPRÁCTICA DIARIA (neuroaprendizaje — recuperación activa,
+   repaso espaciado, constancia sobre intensidad). Se sugiere una
+   plantilla corta según el área elegida; el docente la ajusta al
+   tema exacto de la clase.
+============================================================ */
+const MICRO_SUGERENCIAS = {
+  'Matemática': 'De 2 a 3 ejercicios cortos sobre "{tema}", resueltos sin ayuda en la libreta. Revisión rápida (1-2 min) al inicio de cada clase, no como tarea extensa.',
+  'Comunicación': 'Recuperación activa de 5 min: sin el cuaderno, el estudiante dice o escribe en 2-3 líneas lo que recuerda sobre "{tema}" del día anterior.',
+  'Personal Social': 'Pregunta rápida de inicio de clase (oral o escrita, 5 min): relacionar "{tema}" con un ejemplo de su propia vida o de Cajamarca.',
+  'Ciencia y Tecnología': 'Reto corto diario: explicar con sus propias palabras, en 3 frases, un concepto clave de "{tema}" trabajado en clase.',
+  'Arte y Cultura': 'Repaso breve (5 min): recordar y nombrar en voz alta los elementos vistos sobre "{tema}" antes de continuar con la práctica.',
+  'Educación Física': 'Recordar en 1 minuto, antes de iniciar, la secuencia o regla principal de "{tema}" trabajada la clase anterior.',
+  'Educación Religiosa': 'Pregunta de recuperación activa: ¿qué recuerdas sobre "{tema}"? Compartir en 2-3 frases antes de iniciar la clase.',
+  'Inglés': '3 palabras o frases cortas de "{tema}" repasadas en voz alta cada día, antes de aprender otras nuevas.',
+  'Tutoría / Convivencia': 'Reflexión breve diaria (5 min) retomando "{tema}": una situación en la que se aplicó o se pudo aplicar.'
+};
+
+document.getElementById('btnSugerirMicro').addEventListener('click', ()=>{
+  const area = document.getElementById('area').value;
+  const tema = document.getElementById('tema').value.trim() || 'el tema de hoy';
+  const plantilla = MICRO_SUGERENCIAS[area] || 'Repaso corto de 5-10 min sobre "{tema}", repetido a diario hasta la próxima sesión (constancia, no intensidad).';
+  document.getElementById('micropractica').value = plantilla.replace('{tema}', tema);
+});
+
+/* ============================================================
    BANCO DE PREGUNTAS MANUAL (reemplaza la generación por IA,
    que solo funciona dentro de claude.ai y no en el celular)
 ============================================================ */
-let bancoActual = []; // [{pregunta, opciones:[4], correcta}]
+let bancos = {A:[], B:[]};   // dos exámenes independientes: Fila A y Fila B
+let filaEditando = 'A';
+let bancoActual = bancos.A; // apunta al banco de la fila que se está editando [{pregunta, opciones:[4], correcta}]
+function setBanco(arr){ bancos[filaEditando] = arr; bancoActual = arr; }
+function actualizarSelectorFila(){
+  ['A','B'].forEach(f=>{
+    const b = document.getElementById('btnEditarFila'+f);
+    if(!b) return;
+    b.className = 'fila-btn' + (filaEditando===f ? ' on-'+f : '');
+    b.textContent = `Fila ${f} (${bancos[f].length}/6)`;
+  });
+  const tx = document.getElementById('filaEditandoTxt');
+  if(tx) tx.textContent = `Estás editando el examen de la Fila ${filaEditando}. Escribe o importa sus 6 preguntas; luego cambia a la otra fila.`;
+}
+['A','B'].forEach(f=>document.getElementById('btnEditarFila'+f).addEventListener('click', ()=>{
+  filaEditando = f; bancoActual = bancos[f]; renderBanco();
+}));
+
+// Utilidades de filas / evaluaciones
+function filaDe(s, id){ return (s && s.asignacion && s.asignacion[id]) || 'A'; }
+function preguntasDeFila(s, fila){ return (fila==='B' && s.preguntasB && s.preguntasB.length) ? s.preguntasB : s.preguntas; }
+function keyDeSesion(s){ return s.key || temaKey(s.area, s.competencia, s.tema); }
+function resumenNiveles(items){ const r={C:0,B:0,A:0,AD:0}; items.forEach(e=>{ if(r[e.nivel]!==undefined) r[e.nivel]++; }); return r; }
+function textoResumen(r){ return `C: ${r.C} · B: ${r.B} · A: ${r.A} · AD: ${r.AD}`; }
+function agruparPorFila(s){
+  if(!s.asignacion) return [{fila:null, items:s.evaluados}];
+  return ['A','B'].map(f=>({fila:f, items:s.evaluados.filter(e=>(e.fila||filaDe(s,e.studentId))===f)})).filter(g=>g.items.length>0);
+}
+function pendientesDeEval(key){ return state.pending.filter(p=>!p.legacy && p.key===key); }
 let temaKeyActual = '';
+let fotoTemaBase64 = null;
 
 function temaKey(area, competencia, tema){
   return (area+'|'+competencia+'|'+tema).toLowerCase().trim();
@@ -1164,29 +1135,49 @@ async function prepararSesion(){
     guardado = r ? JSON.parse(r.value) : null;
   }catch(e){ guardado = null; }
 
-  bancoActual = (guardado && guardado.preguntas) ? guardado.preguntas : [];
+  bancos = {
+    A: (guardado && guardado.preguntas) ? guardado.preguntas : [],
+    B: (guardado && guardado.preguntasB) ? guardado.preguntasB : []
+  };
+  filaEditando = 'A'; bancoActual = bancos.A;
+  fotoTemaBase64 = (guardado && guardado.foto) ? guardado.foto : null;
 
+  renderFotoPreview();
   renderBanco();
   document.getElementById('bancoCard').style.display = 'block';
 
   // Si el tema ya tenía preguntas guardadas de antes, ofrece "Comenzar evaluación" de una vez
-  if(bancoActual.length > 0){
+  if(bancos.A.length > 0 || bancos.B.length > 0){
     document.getElementById('bancoGuardadoOk').style.display = 'block';
   } else {
     document.getElementById('bancoGuardadoOk').style.display = 'none';
   }
 }
 
+function renderFotoPreview(){
+  const box = document.getElementById('fotoTemaPreview');
+  box.innerHTML = fotoTemaBase64 ? `<img src="${fotoTemaBase64}" style="max-width:100%;max-height:220px;border-radius:8px;border:1px solid var(--line);">` : '';
+}
+
+document.getElementById('fotoTema').addEventListener('change', (e)=>{
+  const file = e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = ()=>{ fotoTemaBase64 = reader.result; renderFotoPreview(); };
+  reader.readAsDataURL(file);
+});
+
 function renderBanco(){
   const box = document.getElementById('bancoList');
+  actualizarSelectorFila();
   if(bancoActual.length === 0){
-    box.innerHTML = '<p class="hint">Todavía no hay preguntas guardadas para este tema. Usa "+ Agregar pregunta".</p>';
+    box.innerHTML = `<p class="hint">Todavía no hay preguntas de la Fila ${filaEditando} para este tema. Usa "+ Agregar pregunta" o importa un PDF.</p>`;
     return;
   }
   box.innerHTML = bancoActual.map((q,i)=>`
     <div class="card" style="padding:12px;margin-bottom:8px;${i===5?'border-left:4px solid var(--gold, #c98a2e);':''}">
       <div style="display:flex;justify-content:space-between;align-items:center;">
-        <b>${i===5 ? '⭐ Pregunta adicional (bono AD)' : 'Pregunta '+(i+1)+' de 5 (base)'}</b>
+        <b>${i===5 ? '⭐ Fila '+filaEditando+' · Pregunta adicional (bono AD)' : 'Fila '+filaEditando+' · Pregunta '+(i+1)+' de 5 (base)'}</b>
         <button type="button" class="btn outline" data-del="${i}" style="padding:4px 10px;font-size:12px;">✕ Quitar</button>
       </div>
       ${i===5 ? '<p class="hint" style="margin:4px 0 0;">Solo se le mostrará al estudiante si acierta las 5 preguntas base.</p>' : ''}
@@ -1245,69 +1236,34 @@ if(window.pdfjsLib){
   pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 }
 
-function parsePDFTextoAPreguntas(textoOriginal){
-  let texto = textoOriginal;
+function parsePDFTextoAPreguntas(texto){
+  // Formato compacto: si las opciones o la respuesta vienen pegadas en la
+  // misma línea que el enunciado (típico al extraer texto de un PDF), se
+  // separan primero en líneas propias para que el resto del parseo funcione igual.
+  texto = texto.replace(/([^\n])\s+([\*✓✔]?)([abcd])[\.\)]\s*/gi, '$1\n$2$3) ');
+  texto = texto.replace(/([^\n])\s+((?:rpta|respuesta correcta|respuesta|clave|correcta)\s*:)/gi, '$1\n$2');
 
-  // Sinónimos aceptados para el encabezado de cada pregunta y para la
-  // marca de la respuesta correcta. Cubren los formatos más comunes en
-  // evaluaciones peruanas/latinoamericanas (impresas, escaneadas o
-  // exportadas desde Word/Canva a PDF).
-  const SIN_RPTA = 'rpta|resp(?:uesta)?(?:\\s+correcta)?|clave|correcta|soluci[oó]n(?:ario)?|answer|ans';
-
-  // 1) Normaliza encabezados de pregunta pegados al texto siguiente sin
-  //    salto de línea, por ejemplo "Pregunta 6La balanza..." o
-  //    "N°3¿Cuánto..." -> cada uno pasa a su propia línea.
-  const patronesEncabezado = [
-    /pregunta\s*n?[°º]?\s*\d{1,2}/gi,
-    /[íi]tem\s*n?[°º]?\s*\d{1,2}/gi,
-    /\bn[°º]\s*\d{1,2}/gi
-  ];
-  patronesEncabezado.forEach(re=>{
-    const src = re.source;
-    texto = texto.replace(new RegExp('([^\\n])\\s*('+src+')','gi'), '$1\n$2');
-    texto = texto.replace(new RegExp('('+src+')(?=[A-ZÁÉÍÓÚÑ¿])','gi'), '$1\n');
-  });
-
-  // 2) Quita casilleros antes de la letra de opción: "( )", "[ ]", "□", "○".
-  //    Si el casillero venía marcado (X, ✓, ✔, relleno) se convierte en
-  //    asterisco para reconocer esa opción como la correcta.
-  texto = texto.replace(/[\(\[]\s*([xX✓✔•]?)\s*[\)\]]\s*(?=[A-Da-d]\s*[\.\)\]:\-])/g,
-    (m,g1)=> g1 ? '*' : '');
-  texto = texto.replace(/[□○]\s*(?=[A-Da-d]\s*[\.\)\]:\-])/g, '');
-
-  // 3) Separa opciones o marcas de respuesta pegadas en la misma línea del
-  //    enunciado (frecuente al extraer texto de un PDF de una sola pasada).
-  texto = texto.replace(/([^\n])\s+([\*✓✔]?)([abcdABCD])[\.\)]\s*/g, '$1\n$2$3) ');
-  texto = texto.replace(new RegExp('([^\\n])\\s+((?:'+SIN_RPTA+')\\s*:)', 'gi'), '$1\n$2');
-
-  // 4) Separa por número de pregunta. Admite "1.", "1)", "1-", "1:",
-  //    "Pregunta 1", "Ítem 1", "N° 1" (con o sin puntuación después del
-  //    número) al inicio de línea.
+  // Normaliza saltos de línea y separa por número de pregunta
+  // (admite "1.", "1)", "1-", "1:" al inicio de línea)
   const lineas = texto.split(/\r?\n/).map(l=>l.trim()).filter(l=>l.length>0);
   const bloques = [];
   let actual = [];
-  let numActual = null;
-  const reNumPreguntaPalabra = /^(?:pregunta|[íi]tem)\s*n?[°º]?\s*(\d{1,2})\b[\.\)\-:]?\s*/i;
-  const reNumPreguntaSimbolo = /^n[°º]\s*(\d{1,2})\b[\.\)\-:]?\s*/i;
-  const reNumPreguntaDigito = /^(\d{1,2})[\.\)\-:]\s*/;
+  const reNumPregunta = /^\d{1,2}[\.\)\-:]\s*/;
 
   lineas.forEach(linea=>{
-    let m = linea.match(reNumPreguntaPalabra) || linea.match(reNumPreguntaSimbolo) || linea.match(reNumPreguntaDigito);
-    if(m){
-      if(actual.length) bloques.push({num: numActual, lineas: actual});
-      numActual = parseInt(m[1], 10);
-      const resto = linea.slice(m[0].length).trim();
-      actual = resto ? [resto] : [];
+    if(reNumPregunta.test(linea)){
+      if(actual.length) bloques.push(actual);
+      actual = [linea.replace(reNumPregunta,'')];
     } else {
       actual.push(linea);
     }
   });
-  if(actual.length) bloques.push({num: numActual, lineas: actual});
+  if(actual.length) bloques.push(actual);
 
   // Admite letra entre paréntesis o corchetes, con . ) ] : o - como separador,
-  // y un asterisco o check (✓/✔) antes de la letra como marca de opción correcta.
+  // y un asterisk o check (✓/✔) antes de la letra como marca de opción correcta.
   const reOpcion = /^[\(\[]?\s*([abcd])[\.\)\]:\-]\s*(.+)$/i;
-  const reRpta = new RegExp('^(?:'+SIN_RPTA+')\\s*:?\\s*[\\(\\[]?([abcd])\\b', 'i');
+  const reRpta = /^(rpta|respuesta correcta|respuesta|clave|correcta)\s*:?\s*[\(\[]?([abcd])\b/i;
   const reMarcaCorrecta = /^[\*✓✔]/;
 
   const preguntas = [];
@@ -1316,13 +1272,13 @@ function parsePDFTextoAPreguntas(textoOriginal){
     const opciones = {a:'', b:'', c:'', d:''};
     let correctaLetra = null;
 
-    bloque.lineas.forEach(linea=>{
+    bloque.forEach(linea=>{
       const marcada = reMarcaCorrecta.test(linea);
       const lineaLimpia = marcada ? linea.replace(reMarcaCorrecta,'').trim() : linea;
       const mOpcion = lineaLimpia.match(reOpcion);
       const mRpta = lineaLimpia.match(reRpta);
       if(mRpta){
-        correctaLetra = mRpta[1].toLowerCase();
+        correctaLetra = mRpta[2].toLowerCase();
       } else if(mOpcion){
         opciones[mOpcion[1].toLowerCase()] = mOpcion[2].trim();
         if(marcada) correctaLetra = mOpcion[1].toLowerCase();
@@ -1334,49 +1290,17 @@ function parsePDFTextoAPreguntas(textoOriginal){
     const opcionesArr = [opciones.a, opciones.b, opciones.c, opciones.d];
     const completa = preguntaTexto.trim() && opcionesArr.every(o=>o && o.trim());
     if(completa){
+      const idxCorrecta = correctaLetra ? ['a','b','c','d'].indexOf(correctaLetra) : 0;
       preguntas.push({
-        num: bloque.num,
         pregunta: preguntaTexto.trim(),
         opciones: opcionesArr,
-        correcta: correctaLetra ? ['a','b','c','d'].indexOf(correctaLetra) : -1,
+        correcta: idxCorrecta >= 0 ? idxCorrecta : 0,
         rptaDetectada: !!correctaLetra
       });
     }
   });
 
-  // 5) Si alguna pregunta quedó sin respuesta detectada junto a sus
-  //    opciones, se busca una "clave de respuestas" al final del documento
-  //    (formato típico de exámenes impresos: tabla o lista aparte con
-  //    número + letra) y se completa la respuesta desde ahí por número
-  //    de pregunta.
-  if(preguntas.some(p=>!p.rptaDetectada)){
-    const inicioClave = textoOriginal.search(/clave\s+de\s+respuestas|hoja\s+de\s+respuestas|respuestas\s+correctas|soluci[oó]nario|answer\s*key/i);
-    if(inicioClave >= 0){
-      const bloqueClave = textoOriginal.slice(inicioClave);
-      const reParClave = /(\d{1,2})\s*[\.\)\-:]?\s*([abcdABCD])\b/g;
-      const mapaClave = {};
-      let mm;
-      while((mm = reParClave.exec(bloqueClave)) !== null){
-        mapaClave[parseInt(mm[1],10)] = mm[2].toLowerCase();
-      }
-      preguntas.forEach(p=>{
-        if(!p.rptaDetectada && p.num!=null && mapaClave[p.num]){
-          p.correcta = ['a','b','c','d'].indexOf(mapaClave[p.num]);
-          p.rptaDetectada = true;
-        }
-      });
-    }
-  }
-
-  // Nunca se adivina una respuesta: si no se pudo determinar con certeza
-  // cuál opción es la correcta, esa pregunta se descarta en vez de
-  // marcarla por defecto (evita cargar una respuesta incorrecta sin avisar).
-  const reconocidas = preguntas.filter(p=>p.rptaDetectada);
-  const descartadas = preguntas.length - reconocidas.length;
-
-  const resultado = reconocidas.slice(0,6);
-  resultado.descartadasPorFaltaDeRespuesta = descartadas;
-  return resultado;
+  return preguntas.slice(0,6);
 }
 
 document.getElementById('pdfPreguntas').addEventListener('change', async (e)=>{
@@ -1409,202 +1333,27 @@ document.getElementById('pdfPreguntas').addEventListener('change', async (e)=>{
     }
 
     const preguntasDetectadas = parsePDFTextoAPreguntas(textoCompleto);
-    const descartadas = preguntasDetectadas.descartadasPorFaltaDeRespuesta || 0;
 
     if(preguntasDetectadas.length === 0){
-      statusBox.innerHTML = `<span style="color:var(--danger,#b3261e);">No se pudo reconocer ninguna pregunta con su respuesta correcta. Verifica que cada pregunta esté numerada (1. / 1) / Pregunta 1 / N° 1), tenga 4 opciones (a/b/c/d) y que la respuesta correcta esté indicada de alguna forma (Rpta:, Respuesta:, Clave:, un casillero marcado, o una "Clave de respuestas" al final del documento). Si el PDF es una imagen escaneada, no tiene texto seleccionable y no se puede leer así. Revisa el PDF o escribe las preguntas manualmente abajo.</span>`;
+      statusBox.innerHTML = `<span style="color:var(--danger,#b3261e);">No se pudo reconocer ninguna pregunta. Verifica que cada pregunta esté numerada (1. / 1) / 1-) y tenga 4 opciones marcadas a) b) c) d). Si el PDF es una imagen escaneada, no tiene texto seleccionable y no se puede leer así. Revisa el PDF o escribe las preguntas manualmente abajo.</span>`;
       return;
     }
 
+    const sinRpta = preguntasDetectadas.filter(q=>!q.rptaDetectada).length;
+
     // Las preguntas se cargan tal cual se detectaron en el PDF, sin alterar
     // el orden de las opciones a/b/c/d ni la letra marcada como correcta.
-    // Nunca se adivina una respuesta: si no se pudo determinar con certeza,
-    // esa pregunta se descarta en vez de importarla con una respuesta incierta.
-    bancoActual = preguntasDetectadas;
+    setBanco(preguntasDetectadas);
     ocultarComenzar();
     renderBanco();
 
-    statusBox.innerHTML = `<span style="color:var(--good,#2e7d32);">✔ Se importaron ${preguntasDetectadas.length} pregunta(s), tal como aparecen en el PDF (mismo orden de opciones a/b/c/d y misma respuesta correcta marcada).</span>
-      ${descartadas>0 ? `<br><span style="color:var(--danger,#b3261e);">⚠ Se descartaron ${descartadas} pregunta(s) del PDF porque no se pudo determinar con certeza cuál era la respuesta correcta (no se detectó "Rpta:", casillero marcado, ni una clave de respuestas). Agrégalas manualmente si las necesitas.</span>` : ''}
+    statusBox.innerHTML = `<span style="color:var(--good,#2e7d32);">✔ Fila ${filaEditando}: se importaron ${preguntasDetectadas.length} pregunta(s), tal como aparecen en el PDF (mismo orden de opciones a/b/c/d).</span>
+      ${sinRpta>0 ? `<br><span style="color:var(--danger,#b3261e);">⚠ En ${sinRpta} pregunta(s) no se detectó la línea "Rpta:" — revisa cuál opción quedó marcada como correcta antes de guardar.</span>` : ''}
       <br>Revisa el texto y las opciones abajo antes de guardar; el reconocimiento es automático por patrones, no por inteligencia artificial, así que puede tener errores.`;
 
   }catch(err){
     console.error(err);
     statusBox.innerHTML = `<span style="color:var(--danger,#b3261e);">No se pudo leer el PDF (¿está protegido o es una imagen escaneada sin texto?). Escribe las preguntas manualmente abajo.</span>`;
-  }
-});
-
-/* ============================================================
-   IMPORTAR HISTORIAL DESDE UN PDF DE INFORME ANTERIOR
-   Para reconstruir el registro cuando se perdió (por ejemplo, sin
-   copia de seguridad). Solo recupera el resultado de cada estudiante
-   (nivel, aciertos, conclusión) — las 6 preguntas originales de ese
-   día NO se pueden recuperar, el PDF no las incluye.
-============================================================ */
-const MESES_ES = {enero:0,febrero:1,marzo:2,abril:3,mayo:4,junio:5,julio:6,agosto:7,septiembre:8,setiembre:8,octubre:9,noviembre:10,diciembre:11};
-function parseFechaLargaEs(txt){
-  // admite "lunes, 31 de agosto de 2026" -> "2026-08-31"
-  const m = txt.match(/(\d{1,2})\s*de\s*([a-zA-Zá-úñ]+)\s*de\s*(\d{4})/i);
-  if(!m) return null;
-  const dia = Number(m[1]);
-  const mes = MESES_ES[m[2].toLowerCase()];
-  const anio = Number(m[3]);
-  if(mes===undefined) return null;
-  return `${anio}-${String(mes+1).padStart(2,'0')}-${String(dia).padStart(2,'0')}`;
-}
-
-function parsePDFInformeASesion(texto){
-  const get = (re) => { const m = texto.match(re); return m ? m[1].trim() : ''; };
-
-  const fechaTxt = get(/Fecha de evaluación \/ asistencia:\s*(.+)/);
-  const grado = get(/Grado\/Sección:\s*(.+?)\s*—\s*Sección/);
-  const area = get(/Área:\s*(.+)/);
-  const competencia = get(/Competencia:\s*(.+)/);
-  const tema = get(/Tema de la clase:\s*(.+)/);
-
-  const mEstandar = texto.match(/Estándar de aprendizaje \(MINEDU\):\s*([\s\S]*?)\s*Fuente:/);
-  const estandar = mEstandar ? mEstandar[1].replace(/\s+/g,' ').trim() : '';
-  const fuente = get(/Fuente:\s*(.+)/);
-
-  const mCrit = texto.match(/C:\s*menor a\s*(\d+)%.*?A:\s*(\d+)%/s);
-  const thresholds = mCrit ? { B: Number(mCrit[1]), A: Number(mCrit[2]) } : { B:50, A:75 };
-
-  const mMotivo = texto.match(/Motivo de selección de estudiantes:\s*([\s\S]*?)\s*Resultados/);
-  const seleccion_motivo = mMotivo ? mMotivo[1].replace(/\s+/g,' ').trim() : '';
-
-  // --- Ausentes ---
-  const ausentesNombres = [];
-  const mAus = texto.match(/Estudiantes ausentes[\s\S]*?\n([\s\S]*?)(?:\nProf\.|$)/);
-  if(mAus){
-    mAus[1].split('\n').forEach(l=>{
-      const t = l.replace(/^[•\-\*]\s*/,'').trim();
-      if(t) ausentesNombres.push(t);
-    });
-  }
-
-  // --- Resultados ---
-  const inicioRes = texto.indexOf('Resultados');
-  const finAus = texto.indexOf('Estudiantes ausentes');
-  const finProf = texto.indexOf('Prof.');
-  const finRes = finAus >= 0 ? finAus : (finProf >= 0 ? finProf : texto.length);
-  const bloqueResultados = inicioRes >= 0 ? texto.slice(inicioRes + 'Resultados'.length, finRes) : '';
-
-  const reFila = /([A-ZÁÉÍÓÚÑ][^\n—]+?)\s*—\s*Nivel\s+(C|B|A|AD)\s*\((\d+)\/(\d+),\s*(\d+)%\)\n([\s\S]*?)(?=\n[A-ZÁÉÍÓÚÑ][^\n—]+?\s*—\s*Nivel|$)/g;
-  const evaluadosCrudos = [...bloqueResultados.matchAll(reFila)].map(f=>({
-    nombre: f[1].trim(), nivel: f[2], correctas: Number(f[3]), total: Number(f[4]), porcentaje: Number(f[5]),
-    conclusion: f[6].replace(/\s+/g,' ').trim()
-  }));
-
-  // REGLA DE SEGURIDAD: si un estudiante aparece a la vez en "Resultados"
-  // y en "Estudiantes ausentes" del mismo informe, es el error conocido
-  // (se le evaluó por error en vez de marcarlo ausente). Se descarta su
-  // resultado y se respeta que estuvo ausente ese día.
-  const ausentesSet = new Set(ausentesNombres.map(n=>n.toLowerCase()));
-  const evaluados = evaluadosCrudos.filter(e => !ausentesSet.has(e.nombre.toLowerCase()));
-  const descartadosPorContradiccion = evaluadosCrudos.filter(e => ausentesSet.has(e.nombre.toLowerCase())).map(e=>e.nombre);
-
-  return { fechaTxt, grado, area, competencia, tema, estandar, fuente, thresholds, seleccion_motivo, evaluados, ausentes: ausentesNombres, descartadosPorContradiccion };
-}
-
-document.getElementById('inputImportarInformePDF').addEventListener('change', async (e)=>{
-  const files = Array.from(e.target.files || []);
-  const statusBox = document.getElementById('importarInformeStatus');
-  if(files.length === 0) return;
-
-  if(!window.pdfjsLib){
-    statusBox.innerHTML = '<span style="color:var(--danger,#b3261e);">No se pudo cargar el lector de PDF (requiere internet la primera vez). Revisa tu conexión e inténtalo de nuevo.</span>';
-    return;
-  }
-
-  statusBox.innerHTML = `<span class="spinner"></span> Leyendo ${files.length} PDF(s)…`;
-
-  let sesionesImportadas = 0, estudiantesImportados = 0, estudiantesNoReconocidos = new Set(), contradiccionesTotal = [];
-
-  for(const file of files){
-    try{
-      const buffer = await file.arrayBuffer();
-      const pdf = await pdfjsLib.getDocument({data: buffer}).promise;
-      let textoCompleto = '';
-      for(let p=1; p<=pdf.numPages; p++){
-        const page = await pdf.getPage(p);
-        const content = await page.getTextContent();
-        const lineasPagina = {};
-        content.items.forEach(item=>{
-          const y = Math.round(item.transform[5]);
-          if(!lineasPagina[y]) lineasPagina[y] = [];
-          lineasPagina[y].push(item.str);
-        });
-        const ys = Object.keys(lineasPagina).map(Number).sort((a,b)=>b-a);
-        ys.forEach(y=>{ textoCompleto += lineasPagina[y].join(' ') + '\n'; });
-      }
-
-      const r = parsePDFInformeASesion(textoCompleto);
-      if(!r.area || !r.competencia || (r.evaluados.length===0 && r.ausentes.length===0)){
-        continue; // no parece un informe de esta app; se omite en silencio
-      }
-
-      const fechaISO = parseFechaLargaEs(r.fechaTxt);
-      const estOficial = MINEDU_ESTANDARES[r.competencia] || {};
-      const miTemaKey = temaKey(r.area, r.competencia, r.tema);
-
-      const evaluadosConId = [];
-      r.evaluados.forEach(ev=>{
-        const st = ROSTER.find(s => s.name.toLowerCase() === ev.nombre.toLowerCase());
-        if(!st){ estudiantesNoReconocidos.add(ev.nombre); return; }
-        let bono = null;
-        if(ev.porcentaje === 100) bono = (ev.nivel === 'AD');
-        evaluadosConId.push({
-          studentId: st.id, nombre: st.name, correctas: ev.correctas, total: ev.total,
-          porcentaje: ev.porcentaje, nivel: ev.nivel, bono, conclusion: ev.conclusion
-        });
-      });
-
-      state.sessions.push({
-        id: 'SES'+Date.now()+'_'+Math.floor(Math.random()*100000),
-        fecha: fechaISO ? new Date(fechaISO+'T12:00:00').toISOString() : new Date().toISOString(),
-        fechaSesion: fechaISO || computeLogicalDate(),
-        area: r.area, grado: r.grado, competencia: r.competencia, tema: r.tema,
-        capacidades: estOficial.capacidades || [],
-        estandar: r.estandar || estOficial.estandar || '',
-        fuente: r.fuente || estOficial.fuente || '',
-        rubrica: estOficial.rubrica || {},
-        thresholds: r.thresholds,
-        seleccion_motivo: r.seleccion_motivo,
-        preguntas: [],
-        evaluados: evaluadosConId,
-        importadaDesdePDF: true
-      });
-      sesionesImportadas++;
-      estudiantesImportados += evaluadosConId.length;
-
-      // Los ausentes de ese informe (y los descartados por contradicción)
-      // quedan pendientes de ESE mismo tema, igual que si hubiera pasado hoy.
-      r.ausentes.forEach(nombreAusente=>{
-        const st = ROSTER.find(s => s.name.toLowerCase() === nombreAusente.toLowerCase());
-        if(!st){ estudiantesNoReconocidos.add(nombreAusente); return; }
-        if(!state.pending.some(p=>p.id===st.id && p.temaKey===miTemaKey)){
-          state.pending.push({ id: st.id, temaKey: miTemaKey, area: r.area, competencia: r.competencia, tema: r.tema });
-        }
-      });
-      contradiccionesTotal = contradiccionesTotal.concat(r.descartadosPorContradiccion);
-
-    }catch(err){
-      console.error('Error leyendo', file.name, err);
-    }
-  }
-
-  await saveSessions();
-  await savePending();
-  renderRegistro();
-  renderPending();
-  updateAttendanceSummary();
-
-  if(sesionesImportadas === 0){
-    statusBox.innerHTML = `<span style="color:var(--danger,#b3261e);">No se pudo reconocer ningún informe válido en ${files.length} PDF(s). Verifica que sean los PDF de "Informe de Evaluación Formativa" generados por esta misma app, con texto seleccionable (no escaneados).</span>`;
-  } else {
-    statusBox.innerHTML = `<span style="color:var(--good,#2e7d32);">✔ Se importaron ${sesionesImportadas} evaluación(es) al registro, con ${estudiantesImportados} resultado(s) de estudiantes en total.</span>
-      ${contradiccionesTotal.length>0 ? `<br><span style="color:var(--danger,#b3261e);">⚠ Se descartó el resultado de ${contradiccionesTotal.length} estudiante(s) por aparecer también como ausente(s) en el mismo informe (error conocido de evaluar por error a quien faltó): ${contradiccionesTotal.join(', ')}. Quedan pendientes de ese tema en vez de con una nota falsa.</span>` : ''}
-      ${estudiantesNoReconocidos.size>0 ? `<br><span style="color:var(--danger,#b3261e);">⚠ No se reconoció a ${estudiantesNoReconocidos.size} nombre(s) en tu lista actual de estudiantes: ${[...estudiantesNoReconocidos].join(', ')}. Revísalos manualmente.</span>` : ''}`;
   }
 });
 
@@ -1649,51 +1398,58 @@ function renderListaExamenes(box, items, {compact}={}){
       const d = it.datos;
       const nombre = `${d.area || '(sin área)'} — ${d.tema || '(sin tema)'}`;
       const fecha = formatearFechaGuardado(d.guardadoEn);
-      const npreg = (d.preguntas||[]).length;
+      const nA = (d.preguntas||[]).length, nB = (d.preguntasB||[]).length;
       return `<button type="button" class="btn outline" data-examen-idx="${i}" style="display:block;width:100%;text-align:left;margin-top:6px;">
         <strong>${escapeAttr(nombre)}</strong><br>
-        <span style="font-size:11.5px;color:var(--ink-soft);">${escapeAttr(d.competencia||'')} · ${npreg} pregunta(s)${fecha ? ' · guardado el '+fecha : ''}</span>
+        <span style="font-size:11.5px;color:var(--ink-soft);">${escapeAttr(d.competencia||'')} · Fila A: ${nA} preg. · Fila B: ${nB} preg.${fecha ? ' · guardado el '+fecha : ''}</span>
       </button>`;
     }).join('');
 
   box.querySelectorAll('[data-examen-idx]').forEach(btn=>{
-    btn.addEventListener('click', ()=>{
-      if(bancoActual.length>0 && !confirm('Esto reemplazará las preguntas que tienes ahora sin guardar en el editor. ¿Continuar?')) return;
-      const it = items[Number(btn.dataset.examenIdx)];
-      const d = it.datos;
-
-      // Restaura TODOS los campos del formulario, no solo las preguntas
-      if(d.area) document.getElementById('area').value = d.area;
-      populateCompetencias();
-      if(d.competencia) document.getElementById('competencia').value = d.competencia;
-      if(d.grado) document.getElementById('grado').value = d.grado;
-      document.getElementById('tema').value = d.tema || '';
-      if(d.thresholds){
-        document.getElementById('thB').value = d.thresholds.B ?? 50;
-        document.getElementById('thA').value = d.thresholds.A ?? 75;
-      }
-
-      const est = MINEDU_ESTANDARES[d.competencia];
-      if(est){
-        fetchedCapacidades = est.capacidades || [];
-        document.getElementById('standardText').innerHTML = `${est.estandar}<span class="src">Fuente: ${est.fuente}</span>`;
-        document.getElementById('standardCard').style.display = 'block';
-      }
-
-      temaKeyActual = it.key.replace(/^banco:/,'');
-      bancoActual = d.preguntas || [];
-      renderBanco();
-      document.getElementById('bancoCard').style.display = 'block';
-      document.getElementById('bancoGuardadoOk').style.display = bancoActual.length>0 ? 'block' : 'none';
-
-      const cont = box.closest('[data-examenes-container]');
-      if(cont) cont.style.display = 'none';
-      box.innerHTML = '';
-
-      setStatus(`Examen "${d.area} — ${d.tema}" recuperado con ${bancoActual.length} pregunta(s). Revísalo y presiona "▶️ Comenzar evaluación".`, false);
-      document.getElementById('bancoCard').scrollIntoView({behavior:'smooth', block:'start'});
-    });
+    btn.addEventListener('click', ()=>abrirExamenGuardado(items[Number(btn.dataset.examenIdx)], box));
   });
+}
+
+function abrirExamenGuardado(it, box){
+  if((bancos.A.length>0 || bancos.B.length>0) && !confirm('Esto reemplazará las preguntas que tienes ahora sin guardar en el editor. ¿Continuar?')) return;
+  const d = it.datos;
+
+  // Restaura TODOS los campos del formulario, no solo las preguntas
+  if(d.area) document.getElementById('area').value = d.area;
+  populateCompetencias();
+  if(d.competencia) document.getElementById('competencia').value = d.competencia;
+  if(d.grado) document.getElementById('grado').value = d.grado;
+  document.getElementById('tema').value = d.tema || '';
+  document.getElementById('micropractica').value = d.micropractica || '';
+  if(d.thresholds){
+    document.getElementById('thB').value = d.thresholds.B ?? 50;
+    document.getElementById('thA').value = d.thresholds.A ?? 75;
+  }
+
+  const est = MINEDU_ESTANDARES[d.competencia];
+  if(est){
+    fetchedCapacidades = est.capacidades || [];
+    document.getElementById('standardText').innerHTML = `${est.estandar}<span class="src">Fuente: ${est.fuente}</span>`;
+    document.getElementById('standardCard').style.display = 'block';
+  }
+
+  temaKeyActual = it.key.replace(/^banco:/,'');
+  bancos = { A: d.preguntas || [], B: d.preguntasB || [] };
+  filaEditando = 'A'; bancoActual = bancos.A;
+  fotoTemaBase64 = d.foto || null;
+  renderFotoPreview();
+  renderBanco();
+  document.getElementById('bancoCard').style.display = 'block';
+  document.getElementById('bancoGuardadoOk').style.display = (bancos.A.length>0 || bancos.B.length>0) ? 'block' : 'none';
+
+  if(box){
+    const cont = box.closest('[data-examenes-container]');
+    if(cont) cont.style.display = 'none';
+    box.innerHTML = '';
+  }
+
+  setStatus(`Examen "${d.area} — ${d.tema}" recuperado (Fila A: ${bancos.A.length}, Fila B: ${bancos.B.length} preguntas). Revísalo y presiona "▶️ Comenzar evaluación".`, false);
+  document.getElementById('bancoCard').scrollIntoView({behavior:'smooth', block:'start'});
 }
 
 document.getElementById('btnCargarBancoGuardado').addEventListener('click', async ()=>{
@@ -1710,15 +1466,16 @@ document.getElementById('btnCargarBancoGuardado').addEventListener('click', asyn
 
 function validarBanco(){
   const errBox = document.getElementById('bancoError');
-
-  if(bancoActual.length !== 6){
-    errBox.innerHTML = `<div class="error-box">Necesitas exactamente 6 preguntas: 5 preguntas base + 1 pregunta adicional (bono AD) al final. Tienes ${bancoActual.length}.</div>`;
-    return false;
-  }
-  const incompletas = bancoActual.some(q=>!q.pregunta.trim() || q.opciones.some(o=>!o.trim()));
-  if(incompletas){
-    errBox.innerHTML = `<div class="error-box">Hay preguntas u opciones vacías. Complétalas antes de guardar.</div>`;
-    return false;
+  for(const f of ['A','B']){
+    const b = bancos[f];
+    if(b.length !== 6){
+      errBox.innerHTML = `<div class="error-box">La Fila ${f} necesita exactamente 6 preguntas: 5 base + 1 adicional (bono AD) al final. Tiene ${b.length}.</div>`;
+      return false;
+    }
+    if(b.some(q=>!q.pregunta.trim() || q.opciones.some(o=>!o.trim()))){
+      errBox.innerHTML = `<div class="error-box">Hay preguntas u opciones vacías en la Fila ${f}. Complétalas antes de guardar.</div>`;
+      return false;
+    }
   }
   errBox.innerHTML = '';
   return true;
@@ -1731,11 +1488,14 @@ document.getElementById('btnGuardarBanco').addEventListener('click', async ()=>{
   if(!validarBanco()) return;
 
   const paquete = {
-    preguntas: bancoActual,
+    preguntas: bancos.A,
+    preguntasB: bancos.B,
+    foto: fotoTemaBase64,
     area: document.getElementById('area').value,
     grado: document.getElementById('grado').value,
     competencia: document.getElementById('competencia').value.trim(),
     tema: document.getElementById('tema').value.trim(),
+    micropractica: document.getElementById('micropractica').value.trim(),
     thresholds: {
       B: Number(document.getElementById('thB').value),
       A: Number(document.getElementById('thA').value)
@@ -1781,10 +1541,14 @@ document.getElementById('btnComenzarEvaluacion').addEventListener('click', ()=>{
       B: Number(document.getElementById('thB').value),
       A: Number(document.getElementById('thA').value)
     },
-    preguntas: bancoActual.slice(0, 6),
+    preguntas: bancos.A.slice(0, 6),
+    preguntasB: bancos.B.slice(0, 6),
+    key: temaKey(area, competencia, tema),
+    micropractica: document.getElementById('micropractica').value.trim(),
     evaluados: []
   };
 
+  document.getElementById('asignacionCard').style.display = 'none';
   renderQuestionsPreview();
   setStatus('Evaluación iniciada.', false);
   document.getElementById('previewCard').scrollIntoView({behavior:'smooth', block:'start'});
@@ -1793,7 +1557,7 @@ document.getElementById('btnComenzarEvaluacion').addEventListener('click', ()=>{
 function renderQuestionsPreview(){
   const box = document.getElementById('questionsPreview');
   const s = state.currentSession;
-  box.innerHTML = s.preguntas.map((q,i)=>`
+  const bloque = (preg)=> preg.map((q,i)=>`
     <div style="margin-bottom:14px;${i===5?'padding-left:8px;border-left:3px solid var(--gold, #c98a2e);':''}">
       <b>${i===5 ? '⭐ Adicional (bono AD):' : (i+1)+'.'}</b> ${q.pregunta}
       <div style="margin-left:16px;margin-top:4px;">
@@ -1805,6 +1569,8 @@ function renderQuestionsPreview(){
       </div>
     </div>
   `).join('');
+  box.innerHTML = `<h3 style="margin:0 0 8px;color:var(--navy);">FILA A</h3>${bloque(s.preguntas)}` +
+    `<h3 style="margin:18px 0 8px;color:var(--navy);">FILA B</h3>${bloque(s.preguntasB||[])}`;
   document.getElementById('previewCard').style.display = 'block';
 }
 
@@ -1837,42 +1603,133 @@ function mostrarCapacidades(){
 ============================================================ */
 document.getElementById('btnDefinirEvaluados').addEventListener('click', definirEvaluados);
 
+let asig = {};   // id -> 'A' | 'B' | null (solo para esta evaluación)
+
 function definirEvaluados(){
-  if(!state.currentSession){ return; }
   const s = state.currentSession;
-  const miTemaKey = temaKey(s.area, s.competencia, s.tema);
-
-  // Se evalúa a TODOS los estudiantes presentes, en orden de lista (N.° 1 al total actual).
-  const absentIds = ROSTER.filter(st=>!state.attendance[st.id]).map(st=>st.id);
-  const presentIds = ROSTER.filter(st=>state.attendance[st.id]).map(st=>st.id); // ROSTER ya está ordenado por número de lista
-
-  // Los ausentes de hoy quedan con evaluación pendiente, pero SOLO para
-  // este tema/competencia específico — no es un pendiente genérico. Así,
-  // si más adelante se genera una evaluación de OTRO tema o área, este
-  // estudiante no aparece ahí como pendiente sin motivo: su pendiente
-  // solo resurge cuando se vuelva a abrir/tomar ESTE MISMO tema.
-  absentIds.forEach(id=>{
-    const yaPendiente = state.pending.some(p => p.id===id && p.temaKey===miTemaKey);
-    if(!yaPendiente){
-      state.pending.push({ id, temaKey: miTemaKey, area: s.area, competencia: s.competencia, tema: s.tema });
-    }
+  if(!s) return;
+  if(!s.key) s.key = keyDeSesion(s);
+  const presentes = ROSTER.filter(r=>state.attendance[r.id]);
+  const pendKey = pendientesDeEval(s.key);
+  const pendIds = new Set(pendKey.map(p=>p.id));
+  // Si esta misma evaluación ya se tomó a la clase y hay pendientes, es una evaluación de recuperación:
+  // por defecto solo se marca a quienes la deben (con la misma fila que tienen asignada).
+  s.recuperacion = pendKey.length > 0;
+  asig = {};
+  presentes.forEach(r=>{
+    asig[r.id] = (!s.recuperacion || pendIds.has(r.id)) ? (state.filas[r.id] || null) : null;
   });
+  renderAsignacion();
+  const card = document.getElementById('asignacionCard');
+  card.style.display = 'block';
+  card.scrollIntoView({behavior:'smooth', block:'start'});
+}
 
-  state.currentSession.seleccion_motivo = absentIds.length > 0
-    ? `Se llama en orden de lista (N.° 1 al ${ROSTER.length}) a los ${presentIds.length} estudiantes presentes hoy. Los ${absentIds.length} ausente(s) quedan con evaluación pendiente de este tema para su próxima asistencia.`
-    : `Se llama en orden de lista (N.° 1 al ${ROSTER.length}) a los ${presentIds.length} estudiantes: asistencia completa hoy.`;
-  state.currentSession.seleccionados = presentIds;
+function renderAsignacion(){
+  const s = state.currentSession;
+  const presentes = ROSTER.filter(r=>state.attendance[r.id]);
+  const pendKey = pendientesDeEval(s.key);
+  const pendIds = new Set(pendKey.map(p=>p.id));
+
+  const av = document.getElementById('avisoPendientesEval');
+  if(pendKey.length){
+    av.innerHTML = `<div class="aviso-pend"><b>🔔 Estos estudiantes faltaron y deben rendirla:</b><ul>` +
+      pendKey.map(p=>{
+        const st = ROSTER.find(r=>r.id===p.id);
+        if(!st) return '';
+        return `<li>${st.name} — ${state.attendance[p.id] ? '✔ presente hoy' : 'aún ausente'}</li>`;
+      }).join('') + `</ul>${s.recuperacion ? '<span style="font-size:12px;color:var(--ink-soft);">Se marcó solo a quienes la deben; los demás quedan en “—”.</span>' : ''}</div>`;
+  } else av.innerHTML = '';
+
+  const list = document.getElementById('asignacionList');
+  list.innerHTML = presentes.map(r=>{
+    const f = asig[r.id];
+    return `<div class="roster-row">
+      <span class="num">${String(r.num).padStart(2,'0')}</span>
+      <span class="name">${r.name}${pendIds.has(r.id) ? ' <small style="color:#9a5b00;">⏳ debe rendirla</small>' : ''}</span>
+      <span class="fila-group" data-id="${r.id}">
+        <button type="button" class="fila-btn ${f==='A'?'on-A':''}" data-f="A">A</button>
+        <button type="button" class="fila-btn ${f==='B'?'on-B':''}" data-f="B">B</button>
+        <button type="button" class="fila-btn ${!f?'on-X':''}" data-f="">—</button>
+      </span>
+    </div>`;
+  }).join('');
+  list.querySelectorAll('.fila-group').forEach(g=>{
+    g.querySelectorAll('button').forEach(b=>{
+      b.addEventListener('click', ()=>{
+        const id = g.dataset.id, f = b.dataset.f || null;
+        asig[id] = f;
+        if(f){ state.filas[id] = f; saveFilas(); }
+        renderAsignacion();
+      });
+    });
+  });
+  const nA = presentes.filter(r=>asig[r.id]==='A').length;
+  const nB = presentes.filter(r=>asig[r.id]==='B').length;
+  document.getElementById('asignacionResumen').innerHTML =
+    `<span><b>${nA}</b> en Fila A</span><span><b>${nB}</b> en Fila B</span><span><b>${presentes.length-nA-nB}</b> sin fila</span>`;
+}
+
+function asignarATodos(f){
+  ROSTER.filter(r=>state.attendance[r.id]).forEach(r=>{ asig[r.id] = f; if(f) state.filas[r.id] = f; });
+  saveFilas(); renderAsignacion();
+}
+document.getElementById('btnTodosA').addEventListener('click', ()=>asignarATodos('A'));
+document.getElementById('btnTodosB').addEventListener('click', ()=>asignarATodos('B'));
+document.getElementById('btnLimpiarFilas').addEventListener('click', ()=>{
+  ROSTER.forEach(r=>{ asig[r.id]=null; delete state.filas[r.id]; });
+  saveFilas(); renderAsignacion();
+});
+
+document.getElementById('btnConfirmarFilas').addEventListener('click', ()=>{
+  const s = state.currentSession;
+  if(!s) return;
+  const err = document.getElementById('asignacionError');
+  const presentes = ROSTER.filter(r=>state.attendance[r.id]);
+  const ausentes = ROSTER.filter(r=>!state.attendance[r.id]);
+  const ids = presentes.filter(r=>asig[r.id]).map(r=>r.id);
+  const sinFila = presentes.length - ids.length;
+  if(ids.length === 0){
+    err.innerHTML = '<div class="error-box">Asigna al menos un estudiante a la Fila A o B.</div>';
+    return;
+  }
+  if(sinFila > 0 && !s.recuperacion &&
+     !confirm(`${sinFila} estudiante(s) presente(s) no tienen fila y NO serán evaluados ahora. ¿Continuar?`)) return;
+  err.innerHTML = '';
+
+  // Los ausentes quedan pendientes solo de ESTA evaluación (tema y fecha)
+  if(!s.recuperacion){
+    ausentes.forEach(r=>{
+      if(!state.pending.some(p=>p.id===r.id && p.key===s.key)){
+        state.pending.push({id:r.id, key:s.key, area:s.area, competencia:s.competencia, tema:s.tema, fechaSesion:s.fechaSesion});
+      }
+    });
+  }
+  s.asignacion = {};
+  ids.forEach(id=>{ s.asignacion[id] = asig[id]; });
+  s.seleccionados = ids;
+  s.ausentes = ausentes.map(r=>r.name);
+  const nA = ids.filter(id=>asig[id]==='A').length, nB = ids.length - nA;
+  s.seleccion_motivo = (s.recuperacion
+      ? `Evaluación de recuperación: rinden ${ids.length} estudiante(s) que faltaron el día de la evaluación. `
+      : `Se llama en orden de lista alfabética a los ${ids.length} estudiantes. `) +
+    `Fila A: ${nA} · Fila B: ${nB}.` +
+    (!s.recuperacion && ausentes.length ? ` ${ausentes.length} ausente(s) quedan pendientes solo de esta evaluación.` : '');
   savePending();
 
+  document.getElementById('asignacionCard').style.display = 'none';
   switchTab('evaluacion');
   renderSelection();
-}
+});
 
 function switchTab(tab){
   document.querySelectorAll('#tabs button').forEach(b=>b.classList.toggle('active', b.dataset.tab===tab));
-  ['sesion','evaluacion','pendientes','registro'].forEach(t=>{
-    document.getElementById('tab-'+t).style.display = (t===tab) ? 'block' : 'none';
+  ['sesion','evaluacion','pendientes','registro','copia'].forEach(t=>{
+    const el = document.getElementById('tab-'+t);
+    if(el) el.style.display = (t===tab) ? 'block' : 'none';
   });
+  if(tab==='pendientes') renderPending();
+  if(tab==='registro') renderRegistro();
 }
 
 function shuffle(arr){
@@ -1892,13 +1749,25 @@ let quizQIndex = 0;
 let quizCurrentCorrect = 0;
 let quizBonusCorrect = null; // null = no aplica todavía, true/false tras responder el bono
 
+function preguntasActuales(){
+  const s = state.currentSession;
+  return preguntasDeFila(s, filaDe(s, s.seleccionados[quizQueueIndex]));
+}
+
 function renderQueueUI(){
   const s = state.currentSession;
+  const microCard = document.getElementById('microCard');
+  if(s.micropractica){
+    document.getElementById('microCardText').textContent = s.micropractica;
+    microCard.style.display = 'block';
+  } else {
+    microCard.style.display = 'none';
+  }
   document.getElementById('selectionReason').textContent = s.seleccion_motivo || '';
   const queueList = document.getElementById('queueList');
   queueList.innerHTML = s.seleccionados.map(id=>{
     const st = ROSTER.find(r=>r.id===id);
-    return `<span class="queue-chip" data-id="${id}">${String(st.num).padStart(2,'0')} · ${st.name.split(' ')[0]} ${st.name.split(' ').slice(-1)[0]}</span>`;
+    return `<span class="queue-chip" data-id="${id}">${String(st.num).padStart(2,'0')} · ${st.name.split(' ')[0]} ${st.name.split(' ').slice(-1)[0]} · ${filaDe(s,id)}</span>`;
   }).join('');
 }
 
@@ -1933,57 +1802,16 @@ function updateQueueChips(){
   });
 }
 
-// Mueve al estudiante actual al FINAL de la cola de hoy, sin perder a
-// nadie más de lugar, para retomarlo más tarde (por ejemplo, si todavía
-// no está listo para responder). Su turno se reinicia desde la
-// pregunta 1 cuando le vuelva a tocar.
-function saltarEstudianteActual(){
-  const s = state.currentSession;
-  const id = s.seleccionados[quizQueueIndex];
-  s.seleccionados.splice(quizQueueIndex, 1);
-  s.seleccionados.push(id);
-  renderQueueUI();
-  startNextStudent();
-}
-
-// Corrige el error de haber marcado como "presente" a un estudiante que
-// en realidad faltó. A diferencia de "Saltar por ahora", esto lo QUITA
-// definitivamente de la evaluación de hoy (no vuelve a aparecer en la
-// cola), corrige su asistencia a "ausente", y lo deja con evaluación
-// pendiente para su próxima asistencia — igual que a cualquier otro
-// ausente del día. Así la sesión de hoy puede cerrarse sin error aunque
-// ese estudiante nunca haya respondido nada.
-function corregirAusenciaEstudianteActual(){
-  const s = state.currentSession;
-  const id = s.seleccionados[quizQueueIndex];
-  const student = ROSTER.find(r=>r.id===id);
-  if(!student) return;
-  if(!confirm(`¿Confirmas que ${student.name} en realidad FALTÓ hoy?\n\nSe le quitará de la evaluación de hoy, se corregirá su asistencia a "ausente", y quedará pendiente para su próxima asistencia — igual que cualquier otro ausente. Esto no afecta a ningún otro estudiante.`)) return;
-
-  s.seleccionados.splice(quizQueueIndex, 1);
-  state.attendance[id] = false;
-  const miTemaKeyCorr = temaKey(s.area, s.competencia, s.tema);
-  if(!state.pending.some(p => p.id===id && p.temaKey===miTemaKeyCorr)){
-    state.pending.push({ id, temaKey: miTemaKeyCorr, area: s.area, competencia: s.competencia, tema: s.tema });
-  }
-  savePending();
-  renderRoster();
-  updateAttendanceSummary();
-  renderQueueUI();
-  startNextStudent();
-}
-
 function renderQuizQuestion(){
   const s = state.currentSession;
   const studentId = s.seleccionados[quizQueueIndex];
   const student = ROSTER.find(r=>r.id===studentId);
-  const q = s.preguntas[quizQIndex];
+  const q = preguntasActuales()[quizQIndex];
   const area = document.getElementById('quizArea');
-  const hayMasEstudiantes = s.seleccionados.length > 1;
   area.innerHTML = `
     <div class="card" style="padding:0; overflow:hidden;">
       <div class="quiz-student">
-        <span>N.° ${String(student.num).padStart(2,'0')} · ${student.name}</span>
+        <span>N.° ${String(student.num).padStart(2,'0')} · ${student.name} · Fila ${filaDe(s,studentId)}</span>
         <span class="qn">Pregunta ${quizQIndex+1} / 5</span>
       </div>
       <div class="quiz-body">
@@ -1992,31 +1820,24 @@ function renderQuizQuestion(){
         <div class="quiz-opts" id="quizOpts">
           ${q.opciones.map((op,i)=>`<button class="quiz-opt" data-i="${i}"><span class="quiz-opt-letter">${String.fromCharCode(97+i)}</span><span class="quiz-opt-text">${op}</span></button>`).join('')}
         </div>
-        <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:10px;">
-          ${hayMasEstudiantes ? `<button type="button" class="btn outline small" id="btnSaltarEstudiante">⏭ Saltar por ahora (retomar al final)</button>` : ''}
-          <button type="button" class="btn outline small" id="btnCorregirAusencia" style="color:var(--danger,#b3261e);border-color:var(--danger,#b3261e);">❌ En realidad faltó hoy (quitar de esta evaluación)</button>
-        </div>
       </div>
     </div>
   `;
   document.querySelectorAll('.quiz-opt').forEach(btn=>{
     btn.addEventListener('click', ()=>answerQuiz(Number(btn.dataset.i)));
   });
-  const btnSaltar = document.getElementById('btnSaltarEstudiante');
-  if(btnSaltar) btnSaltar.addEventListener('click', saltarEstudianteActual);
-  document.getElementById('btnCorregirAusencia').addEventListener('click', corregirAusenciaEstudianteActual);
 }
 
 function renderBonusQuestion(){
   const s = state.currentSession;
   const studentId = s.seleccionados[quizQueueIndex];
   const student = ROSTER.find(r=>r.id===studentId);
-  const q = s.preguntas[5];
+  const q = preguntasActuales()[5];
   const area = document.getElementById('quizArea');
   area.innerHTML = `
     <div class="card" style="padding:0; overflow:hidden; border:2px solid var(--gold, #c98a2e);">
       <div class="quiz-student" style="background:var(--gold, #c98a2e); color:#2a1c04;">
-        <span>N.° ${String(student.num).padStart(2,'0')} · ${student.name}</span>
+        <span>N.° ${String(student.num).padStart(2,'0')} · ${student.name} · Fila ${filaDe(s,studentId)}</span>
         <span class="qn">⭐ Pregunta adicional (bono AD)</span>
       </div>
       <div class="quiz-body">
@@ -2025,20 +1846,17 @@ function renderBonusQuestion(){
         <div class="quiz-opts" id="quizOpts">
           ${q.opciones.map((op,i)=>`<button class="quiz-opt" data-i="${i}"><span class="quiz-opt-letter">${String.fromCharCode(97+i)}</span><span class="quiz-opt-text">${op}</span></button>`).join('')}
         </div>
-        ${s.seleccionados.length > 1 ? `<button type="button" class="btn outline small" id="btnSaltarEstudiante" style="margin-top:10px;">⏭ Saltar por ahora (retomar al final)</button>` : ''}
       </div>
     </div>
   `;
   document.querySelectorAll('.quiz-opt').forEach(btn=>{
     btn.addEventListener('click', ()=>answerBonus(Number(btn.dataset.i)));
   });
-  const btnSaltar = document.getElementById('btnSaltarEstudiante');
-  if(btnSaltar) btnSaltar.addEventListener('click', saltarEstudianteActual);
 }
 
 function answerQuiz(chosenIndex){
   const s = state.currentSession;
-  const q = s.preguntas[quizQIndex];
+  const q = preguntasActuales()[quizQIndex];
   const buttons = document.querySelectorAll('.quiz-opt');
   buttons.forEach(b=>b.disabled = true);
   buttons[q.correcta].classList.add('correct');
@@ -2051,7 +1869,7 @@ function answerQuiz(chosenIndex){
     quizQIndex++;
     if(quizQIndex < 5){
       renderQuizQuestion();
-    } else if(quizCurrentCorrect === 5 && s.preguntas.length >= 6){
+    } else if(quizCurrentCorrect === 5 && preguntasActuales().length >= 6){
       renderBonusQuestion();
     } else {
       finishStudent();
@@ -2061,7 +1879,7 @@ function answerQuiz(chosenIndex){
 
 function answerBonus(chosenIndex){
   const s = state.currentSession;
-  const q = s.preguntas[5];
+  const q = preguntasActuales()[5];
   const buttons = document.querySelectorAll('.quiz-opt');
   buttons.forEach(b=>b.disabled = true);
   buttons[q.correcta].classList.add('correct');
@@ -2101,15 +1919,13 @@ function finishStudent(){
   const conclusion = `${student.name} obtuvo el nivel ${nivel} (${quizCurrentCorrect}/5 preguntas base correctas, ${pct}%) en la competencia "${s.competencia}".${bonoTexto} ${descriptor}`.trim();
 
   s.evaluados.push({
-    studentId, nombre: student.name, correctas: quizCurrentCorrect, total: 5,
+    studentId, nombre: student.name, fila: filaDe(s, studentId), correctas: quizCurrentCorrect, total: 5,
     porcentaje: pct, nivel, bono: pct===100 ? quizBonusCorrect : null, conclusion
   });
 
-  // Se quita de la cola de pendientes SOLO el pendiente de este mismo
-  // tema/competencia (si lo tenía) — no se tocan sus pendientes de
-  // otros temas, que siguen intactos hasta que se retomen ellos mismos.
-  const miTemaKeyEval = temaKey(s.area, s.competencia, s.tema);
-  state.pending = state.pending.filter(p => !(p.id === studentId && p.temaKey === miTemaKeyEval));
+  // remove from pending queue, since evaluated now
+  const kS = keyDeSesion(s);
+  state.pending = state.pending.filter(p => !(p.id === studentId && p.key === kS));
   savePending();
 
   const area = document.getElementById('quizArea');
@@ -2117,7 +1933,7 @@ function finishStudent(){
     <div class="card">
       <div style="display:flex; align-items:center; gap:10px;">
         <span class="badge ${nivel}">${nivel}</span>
-        <b>${student.name}</b>
+        <b>${student.name}</b> <span class="badge" style="background:#e8ebf3;color:var(--navy);">Fila ${filaDe(s,studentId)}</span>
         <span style="color:var(--ink-soft); font-size:13px;">${quizCurrentCorrect}/5 correctas (${pct}%)${pct===100 ? (quizBonusCorrect ? ' + bono ✔' : ' + bono ✕') : ''}</span>
       </div>
       <div class="conclusion-text">${conclusion}</div>
@@ -2142,6 +1958,7 @@ document.getElementById('btnGuardarSesion').addEventListener('click', async ()=>
   document.getElementById('btnGuardarSesion').disabled = true;
   renderRoster();
   updateAttendanceSummary();
+  renderPending();
 });
 
 // Descartar la evaluación en curso (por si se quiere empezar de nuevo)
@@ -2210,6 +2027,14 @@ function generarPDF(s){
     `C: menor a ${s.thresholds.B}%  |  B: ${s.thresholds.B}%–${s.thresholds.A-1}%  |  A: ${s.thresholds.A}%–100%  |  AD: 100% + acierta la 6.ª pregunta adicional (bono)`, 180);
   doc.text(criterioLines, margin, y); y += criterioLines.length*4.5 + 4;
 
+  if(s.micropractica){
+    doc.setFont('helvetica','bold'); doc.setFontSize(11); doc.text('Micropráctica diaria de refuerzo (neuroaprendizaje):', margin, y); y+=5;
+    doc.setFont('helvetica','normal'); doc.setFontSize(9);
+    const microLines = doc.splitTextToSize(s.micropractica, 180);
+    doc.text(microLines, margin, y); y += microLines.length*4.5 + 6;
+    doc.setFontSize(10);
+  }
+
   doc.setFont('helvetica','bold'); doc.setFontSize(11); doc.text('Motivo de selección de estudiantes:', margin, y); y+=5;
   doc.setFont('helvetica','normal'); doc.setFontSize(9);
   const motivoLines = doc.splitTextToSize(s.seleccion_motivo || '', 180);
@@ -2217,22 +2042,40 @@ function generarPDF(s){
 
   doc.setFont('helvetica','bold'); doc.setFontSize(11); doc.text('Resultados', margin, y); y+=7;
 
-  s.evaluados.forEach(ev=>{
-    if(y > 265){ doc.addPage(); y = 18; }
-    doc.setFont('helvetica','bold'); doc.setFontSize(10);
-    doc.text(`${ev.nombre}  —  Nivel ${ev.nivel}  (${ev.correctas}/${ev.total}, ${ev.porcentaje}%)`, margin, y); y+=5;
-    doc.setFont('helvetica','italic'); doc.setFontSize(9);
-    const cLines = doc.splitTextToSize(ev.conclusion, 180);
-    doc.text(cLines, margin, y); y += cLines.length*4.5 + 5;
+  const grupos = agruparPorFila(s);
+  if(s.asignacion){
+    doc.setFontSize(10);
+    grupos.forEach(g=>{
+      doc.setFont('helvetica','bold'); doc.text(`Fila ${g.fila}: ${g.items.length} estudiante(s)`, margin, y);
+      doc.setFont('helvetica','normal'); doc.text(textoResumen(resumenNiveles(g.items)), margin+55, y); y+=5.5;
+    });
+    y += 3;
+  }
+  grupos.forEach(g=>{
+    if(g.fila){
+      if(y > 255){ doc.addPage(); y = 18; }
+      doc.setFont('helvetica','bold'); doc.setFontSize(11);
+      doc.text(`FILA ${g.fila}  —  ${textoResumen(resumenNiveles(g.items))}`, margin, y);
+      y += 2; doc.line(margin, y, 195, y); y += 5;
+    }
+    g.items.forEach(ev=>{
+      if(y > 265){ doc.addPage(); y = 18; }
+      doc.setFont('helvetica','bold'); doc.setFontSize(10);
+      doc.text(`${ev.nombre}${g.fila ? ' [Fila '+g.fila+']' : ''}  —  Nivel ${ev.nivel}  (${ev.correctas}/${ev.total}, ${ev.porcentaje}%)`, margin, y); y+=5;
+      doc.setFont('helvetica','italic'); doc.setFontSize(9);
+      const cLines = doc.splitTextToSize(ev.conclusion, 180);
+      doc.text(cLines, margin, y); y += cLines.length*4.5 + 5;
+    });
+    y += 2;
   });
 
-  const ausentesHoy = ROSTER.filter(r=>!state.attendance[r.id]);
+  const ausentesHoy = Array.isArray(s.ausentes) ? s.ausentes : [];
   if(ausentesHoy.length){
     if(y > 255){ doc.addPage(); y = 18; }
     y += 3;
-    doc.setFont('helvetica','bold'); doc.setFontSize(11); doc.text('Estudiantes ausentes (quedan con evaluación pendiente)', margin, y); y+=6;
+    doc.setFont('helvetica','bold'); doc.setFontSize(11); doc.text('Estudiantes ausentes (pendientes solo de esta evaluación)', margin, y); y+=6;
     doc.setFont('helvetica','normal'); doc.setFontSize(9);
-    ausentesHoy.forEach(a=>{ doc.text('• '+a.name, margin, y); y+=5; });
+    ausentesHoy.forEach(a=>{ doc.text('• '+a, margin, y); y+=5; });
   }
 
   doc.setFontSize(8); doc.setTextColor(120);
@@ -2248,20 +2091,54 @@ function renderPending(){
   const box = document.getElementById('pendingList');
   if(state.pending.length === 0){
     box.innerHTML = '<div class="empty-state">No hay estudiantes con evaluación pendiente. 🎉</div>';
+    renderAvisoPendientes();
     return;
   }
-  // Agrupa por estudiante: un mismo estudiante puede deber más de un tema.
-  const porEstudiante = {};
-  state.pending.forEach(p=>{
-    if(!porEstudiante[p.id]) porEstudiante[p.id] = [];
-    porEstudiante[p.id].push(p);
+  const grupos = {}; const legacy = [];
+  state.pending.forEach((p,idx)=>{
+    if(p.legacy){ legacy.push({p,idx}); return; }
+    (grupos[p.key] = grupos[p.key] || {info:p, items:[]}).items.push({p,idx});
   });
-  box.innerHTML = `<div class="roster-list">` + Object.keys(porEstudiante).map(id=>{
-    const st = ROSTER.find(r=>r.id===id);
-    if(!st) return '';
-    const temas = porEstudiante[id].map(p => `${p.area}${p.tema ? ' · '+p.tema : ''}`).join(' · y también · ');
-    return `<div class="roster-row"><span class="name">${st.name}<br><span style="font-size:12px;color:var(--ink-soft);font-weight:400;">Debe: ${temas}</span></span><span class="pending-tag">pendiente</span></div>`;
-  }).join('') + `</div>`;
+  let html = '';
+  Object.keys(grupos).forEach(k=>{
+    const g = grupos[k], inf = g.info;
+    const f = (inf.fechaSesion||'').split('-').reverse().join('/');
+    html += `<div class="session-block"><div class="sh"><span class="title">${escapeAttr(inf.area)} — ${escapeAttr(inf.competencia)} · ${escapeAttr(inf.tema)}</span><span class="date">${f}</span></div>
+      <div class="roster-list">` + g.items.map(({p,idx})=>{
+        const st = ROSTER.find(r=>r.id===p.id);
+        if(!st) return '';
+        return `<div class="roster-row"><span class="name">${st.name} <small style="color:var(--ink-soft);">${state.attendance[p.id]?'· presente hoy':'· ausente hoy'}</small></span>
+          <button type="button" class="btn outline small" data-quitar="${idx}">✕ Quitar</button></div>`;
+      }).join('') + `</div>
+      <div style="margin-top:8px;"><button type="button" class="btn gold small" data-abrir="${g.items[0].idx}">📂 Abrir esta evaluación</button></div></div>`;
+  });
+  if(legacy.length){
+    html += `<div class="session-block"><div class="sh"><span class="title">Pendientes de versiones anteriores (sin detalle de evaluación)</span></div><div class="roster-list">` +
+      legacy.map(({p,idx})=>{
+        const st = ROSTER.find(r=>r.id===p.id);
+        if(!st) return '';
+        return `<div class="roster-row"><span class="name">${st.name}</span><button type="button" class="btn outline small" data-quitar="${idx}">✕ Quitar</button></div>`;
+      }).join('') + `</div></div>`;
+  }
+  box.innerHTML = html;
+  box.querySelectorAll('[data-quitar]').forEach(b=>b.addEventListener('click', ()=>{
+    state.pending.splice(Number(b.dataset.quitar),1);
+    savePending(); renderPending();
+  }));
+  box.querySelectorAll('[data-abrir]').forEach(b=>b.addEventListener('click', ()=>{
+    abrirEvaluacionPorKey(state.pending[Number(b.dataset.abrir)].key);
+  }));
+  renderAvisoPendientes();
+}
+
+async function abrirEvaluacionPorKey(key){
+  try{
+    const items = await listarExamenesGuardados();
+    const it = items.find(x=>x.key === 'banco:'+key);
+    if(!it){ alert('No se encontró el examen guardado de esta evaluación en este dispositivo.'); return; }
+    switchTab('sesion');
+    abrirExamenGuardado(it, null);
+  }catch(e){ alert('No se pudo acceder al almacenamiento del dispositivo.'); }
 }
 
 /* ============================================================
@@ -2275,25 +2152,29 @@ function renderRegistro(){
   }
   box.innerHTML = state.sessions.map(s=>{
     const fecha = new Date(s.fecha).toLocaleDateString('es-PE', {day:'2-digit',month:'short',year:'numeric'});
-    const rows = s.evaluados.map(e=>`
-      <tr>
-        <td>${e.nombre}</td>
-        <td><span class="badge ${e.nivel}">${e.nivel}</span></td>
-        <td>${e.correctas}/${e.total} (${e.porcentaje}%)</td>
-        <td><button type="button" class="btn outline small" data-quitar-res="${s.id}|${e.studentId}" title="Quitar solo este resultado, por ejemplo si fue un error al calificar" style="color:var(--danger,#b3261e);border-color:var(--danger,#b3261e);padding:2px 8px;">🗑️</button></td>
-      </tr>
-    `).join('');
+    const tablas = agruparPorFila(s).map(g=>{
+      const filasHtml = g.items.map(e=>`
+        <tr>
+          <td>${e.nombre}</td>
+          <td><span class="badge ${e.nivel}">${e.nivel}</span></td>
+          <td>${e.correctas}/${e.total} (${e.porcentaje}%)</td>
+        </tr>`).join('');
+      const cab = g.fila ? `<div style="margin:12px 0 4px;font-weight:700;color:var(--navy);">Fila ${g.fila} · ${g.items.length} estudiante(s) <span style="font-weight:500;font-size:12px;color:var(--ink-soft);">(${textoResumen(resumenNiveles(g.items))})</span></div>` : '';
+      return cab + `<table class="reg">
+          <thead><tr><th>Estudiante</th><th>Nivel</th><th>Resultado</th></tr></thead>
+          <tbody>${filasHtml}</tbody>
+        </table>`;
+    }).join('');
     return `
       <div class="session-block">
         <div class="sh">
           <span class="title">${s.area} — ${s.competencia}${s.tema ? ' · ' + s.tema : ''}</span>
           <span class="date">${fecha}</span>
         </div>
-        <table class="reg">
-          <thead><tr><th>Estudiante</th><th>Nivel</th><th>Resultado</th><th></th></tr></thead>
-          <tbody>${rows}</tbody>
-        </table>
+        ${s.micropractica ? `<p class="hint" style="margin:4px 0 8px;">⚡ Micropráctica: ${s.micropractica}</p>` : ''}
+        ${tablas}
         <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;">
+          <button type="button" class="btn outline small" data-pdf-ses="${s.id}">📄 Informe PDF (por filas)</button>
           <button type="button" class="btn outline small" data-retake-ses="${s.id}">🔄 Volver a tomar esta evaluación</button>
           <button type="button" class="btn outline small" data-del-ses="${s.id}" style="color:var(--danger,#b3261e);border-color:var(--danger,#b3261e);">🗑️ Eliminar de este registro</button>
         </div>
@@ -2307,41 +2188,9 @@ function renderRegistro(){
   box.querySelectorAll('[data-retake-ses]').forEach(btn=>{
     btn.addEventListener('click', ()=>volverATomarSesion(btn.dataset.retakeSes));
   });
-  box.querySelectorAll('[data-quitar-res]').forEach(btn=>{
-    btn.addEventListener('click', ()=>{
-      const [sesionId, studentId] = btn.dataset.quitarRes.split('|');
-      quitarResultadoIndividual(sesionId, studentId);
-    });
+  box.querySelectorAll('[data-pdf-ses]').forEach(btn=>{
+    btn.addEventListener('click', ()=>{ const s = state.sessions.find(x=>x.id===btn.dataset.pdfSes); if(s) generarPDF(s); });
   });
-}
-
-// Quita el resultado de UN SOLO estudiante dentro de una evaluación ya
-// guardada — por ejemplo, si por error se le calificó sin haber sido
-// evaluado realmente. No afecta a los demás estudiantes de esa misma
-// sesión. El estudiante vuelve a quedar pendiente de ESE tema, para
-// evaluarlo de verdad la próxima vez.
-async function quitarResultadoIndividual(sesionId, studentId){
-  const s = state.sessions.find(x=>x.id===sesionId);
-  if(!s) return;
-  const ev = s.evaluados.find(e=>e.studentId===studentId);
-  if(!ev) return;
-  if(!confirm(`¿Quitar el resultado de "${ev.nombre}" en "${s.area} — ${s.competencia}${s.tema?' · '+s.tema:''}"?\n\nEsto NO afecta a los demás estudiantes de esta sesión. ${ev.nombre} volverá a quedar pendiente de este tema para evaluarlo correctamente la próxima vez.`)) return;
-
-  s.evaluados = s.evaluados.filter(e=>e.studentId!==studentId);
-  if(s.evaluados.length === 0){
-    // Si era el único resultado de la sesión, ya no queda nada que registrar
-    state.sessions = state.sessions.filter(x=>x.id!==sesionId);
-  }
-  await saveSessions();
-
-  const miTemaKey = temaKey(s.area, s.competencia, s.tema);
-  if(!state.pending.some(p=>p.id===studentId && p.temaKey===miTemaKey)){
-    state.pending.push({ id: studentId, temaKey: miTemaKey, area: s.area, competencia: s.competencia, tema: s.tema });
-  }
-  await savePending();
-
-  renderRegistro();
-  setStatus(`Se quitó el resultado de ${ev.nombre}. Queda pendiente de "${s.area}${s.tema?' · '+s.tema:''}" para su próxima evaluación real.`, false);
 }
 
 // Elimina del registro una sesión guardada por error (no toca al banco de
@@ -2363,13 +2212,14 @@ async function eliminarSesionRegistro(sesionId){
 function volverATomarSesion(sesionId){
   const s = state.sessions.find(x=>x.id===sesionId);
   if(!s) return;
-  if(bancoActual.length>0 && !confirm('Esto reemplazará las preguntas que tengas ahora sin guardar en el editor de "Nueva sesión". ¿Continuar?')) return;
+  if((bancos.A.length>0 || bancos.B.length>0) && !confirm('Esto reemplazará las preguntas que tengas ahora sin guardar en el editor de "Nueva sesión". ¿Continuar?')) return;
 
   document.getElementById('area').value = s.area;
   populateCompetencias();
   document.getElementById('competencia').value = s.competencia;
-  document.getElementById('grado').value = s.grado || '5.° grado de primaria (V ciclo)';
+  document.getElementById('grado').value = s.grado || '5.° grado de primaria (VI ciclo)';
   document.getElementById('tema').value = s.tema || '';
+  document.getElementById('micropractica').value = s.micropractica || '';
   document.getElementById('thB').value = (s.thresholds && s.thresholds.B) ?? 50;
   document.getElementById('thA').value = (s.thresholds && s.thresholds.A) ?? 75;
 
@@ -2379,11 +2229,14 @@ function volverATomarSesion(sesionId){
     document.getElementById('standardCard').style.display = 'block';
   }
 
-  temaKeyActual = (s.area+'|'+s.competencia+'|'+s.tema).toLowerCase().replace(/[^a-z0-9]+/g,'_');
-  bancoActual = JSON.parse(JSON.stringify(s.preguntas || []));
+  temaKeyActual = temaKey(s.area, s.competencia, s.tema);
+  bancos = { A: JSON.parse(JSON.stringify(s.preguntas || [])), B: JSON.parse(JSON.stringify(s.preguntasB || [])) };
+  filaEditando = 'A'; bancoActual = bancos.A;
+  fotoTemaBase64 = null;
+  renderFotoPreview();
   renderBanco();
   document.getElementById('bancoCard').style.display = 'block';
-  document.getElementById('bancoGuardadoOk').style.display = bancoActual.length===6 ? 'block' : 'none';
+  document.getElementById('bancoGuardadoOk').style.display = (bancos.A.length===6 && bancos.B.length===6) ? 'block' : 'none';
 
   switchTab('sesion');
   setStatus(`Preguntas de "${s.area} — ${s.tema}" cargadas de nuevo. Revísalas y presiona "▶️ Comenzar evaluación" para tomarla otra vez. Si el registro anterior fue un error, elimínalo desde la pestaña "Registro".`, false);
@@ -2455,10 +2308,8 @@ if('serviceWorker' in navigator){
 (async function init(){
   populateCompetencias();
   await loadPersisted();
-  await loadRosterOverrides();
   await checkAndResetAttendanceForNewDay();
   renderRoster();
-  renderGestionEstudiantes();
 
   try{
     const items = await listarExamenesGuardados();

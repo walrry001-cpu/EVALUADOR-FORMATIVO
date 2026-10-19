@@ -1,87 +1,29 @@
-// Service worker del Evaluador Formativo - 5.° E
-// Cachea el "cascarón" de la app para que funcione sin internet.
-// Las librerías externas (jsPDF, pdf.js) y la descarga de PDF
-// siguen necesitando conexión la primera vez que se usan.
-//
-// IMPORTANTE: la página principal (index.html) usa estrategia
-// "red primero, caché como respaldo": cada vez que hay internet,
-// se revisa GitHub por una versión más nueva antes de mostrar algo.
-// Así, cualquier cambio futuro al index.html (nuevos estudiantes,
-// mejoras, etc.) se refleja de inmediato sin quedar "pegado" a una
-// copia vieja guardada en el celular. Si no hay internet, se usa la
-// última copia guardada para que la app siga funcionando offline.
-
-const CACHE_NAME = 'evaluador-formativo-v3';
-const APP_SHELL = [
-  './',
-  './index.html',
-  './manifest.json',
-  './icons/icon-192.png',
-  './icons/icon-512.png',
-  './icons/apple-touch-icon.png',
-  './favicon.ico'
+// Service worker: guarda la app y las librerías para usarla sin internet.
+const CACHE = 'evaluador-formativo-v2';
+const LOCAL = ['./','index.html','manifest.json','favicon.ico','icons/icon-192.png','icons/icon-512.png','icons/apple-touch-icon.png','icons/favicon-32.png','icons/favicon-16.png'];
+const CDN = [
+  'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js',
+  'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js',
+  'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js'
 ];
-
-self.addEventListener('install', (event) => {
-  event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(APP_SHELL))
-  );
-  self.skipWaiting();
+self.addEventListener('install', e=>{
+  e.waitUntil(caches.open(CACHE).then(async c=>{
+    await c.addAll(LOCAL);
+    for(const u of CDN){ try{ await c.add(u); }catch(_){} }
+  }).then(()=>self.skipWaiting()));
 });
-
-self.addEventListener('activate', (event) => {
-  event.waitUntil(
-    caches.keys().then((keys) =>
-      Promise.all(
-        keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key))
-      )
-    )
-  );
-  self.clients.claim();
+self.addEventListener('activate', e=>{
+  e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim()));
 });
-
-function esPaginaPrincipal(request){
-  if (request.mode === 'navigate') return true;
-  const url = new URL(request.url);
-  return url.pathname.endsWith('/index.html') || url.pathname.endsWith('/');
-}
-
-self.addEventListener('fetch', (event) => {
-  // Solo intervenimos peticiones GET dentro del propio dominio.
-  if (event.request.method !== 'GET') return;
-
-  // Página principal: red primero (para tomar cambios nuevos de
-  // inmediato), y solo si falla la red se usa la copia guardada.
-  if (esPaginaPrincipal(event.request)) {
-    event.respondWith(
-      fetch(event.request)
-        .then((response) => {
-          if (response.ok) {
-            const clone = response.clone();
-            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
-          }
-          return response;
-        })
-        .catch(() => caches.match(event.request))
-    );
-    return;
-  }
-
-  // Resto de archivos (íconos, manifest, etc.): caché primero,
-  // ya que rara vez cambian y así se ahorra datos.
-  event.respondWith(
-    caches.match(event.request).then((cached) => {
-      if (cached) return cached;
-
-      return fetch(event.request)
-        .then((response) => {
-          if (response.ok && event.request.url.startsWith(self.location.origin)) {
-            const clone = response.clone();
-            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
-          }
-          return response;
-        })
-        .catch(() => cached);
+self.addEventListener('fetch', e=>{
+  if(e.request.method!=='GET') return;
+  e.respondWith(
+    caches.match(e.request).then(hit=>{
+      const red = fetch(e.request).then(r=>{
+        if(r && (r.ok || r.type==='opaque')){ const cp=r.clone(); caches.open(CACHE).then(c=>c.put(e.request,cp)); }
+        return r;
+      }).catch(()=>hit);
+      return hit || red;
     })
   );
 });
