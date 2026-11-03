@@ -360,6 +360,7 @@
   .fila-tools{display:flex; gap:8px; flex-wrap:wrap; margin:10px 0;}
   .aviso-pend{border-left:4px solid var(--gold,#c98a2e); background:#fff8ea; padding:10px 12px; border-radius:6px; font-size:13px; margin-top:12px;}
   .aviso-pend ul{margin:6px 0 0; padding-left:18px;}
+.quiz-opt.selected{ outline:3px solid var(--gold,#c98a2e); outline-offset:-1px; background:#fff6e0; }
 </style>
 </head>
 <body>
@@ -458,7 +459,7 @@
       <label>Tema de la clase de hoy</label>
       <input type="text" id="tema" placeholder='Ej: "La multiplicación con la propiedad distributiva" / "El respeto en la convivencia escolar"'>
 
-      <div class="fixed-quiz-note">⚡ Cada evaluación usa <b>5 preguntas base</b> (100%) + <b>1 pregunta adicional</b> que solo se activa cuando el estudiante acierta las 5 base, y define el nivel <b>AD</b>.</div>
+      <div class="fixed-quiz-note">⚡ Cada evaluación usa <b>5 preguntas base</b> (<b>3 en Matemática</b>, por ser un área más exigente) + <b>1 pregunta adicional</b> que solo aparece cuando el estudiante acierta todas las base, y define el nivel <b>AD</b>.</div>
 
       <label>⚡ Micropráctica diaria de refuerzo (neuroaprendizaje — 5 a 10 min, todos los días de la semana)</label>
       <p class="hint" style="margin-top:-4px;">El cerebro retiene más por constancia que por intensidad. Escribe un reto corto de recuperación activa ligado al tema de hoy; se repite a diario (no como tarea extensa) hasta la próxima sesión.</p>
@@ -467,14 +468,14 @@
         <button class="btn outline small" id="btnSugerirMicro" type="button" style="white-space:nowrap;">💡 Sugerir</button>
       </div>
 
-      <label>Umbrales de calificación (% de aciertos en las 5 preguntas base)</label>
+      <label>Umbrales de calificación (% de aciertos en las preguntas base)</label>
       <div class="rubric-grid" id="rubricThresholds">
         <div class="rubric-cell"><div class="lvl badge C">C</div><div style="font-size:11px;color:var(--ink-soft)">hasta antes de</div><input type="number" id="thB" value="50" min="1" max="99">%</div>
         <div class="rubric-cell"><div class="lvl badge B">B</div><div style="font-size:11px;color:var(--ink-soft)">hasta antes de</div><input type="number" id="thA" value="75" min="1" max="99">%</div>
         <div class="rubric-cell"><div class="lvl badge A">A</div><div style="font-size:11px;color:var(--ink-soft)">hasta</div><div style="font-weight:600;font-size:15px;">100%</div></div>
         <div class="rubric-cell"><div class="lvl badge AD">AD</div><div style="font-size:10.5px;color:var(--ink-soft)">100% + acierta</div><div style="font-weight:600;font-size:12.5px;">pregunta adicional</div></div>
       </div>
-      <p class="hint" style="margin-top:6px;">El nivel AD solo se ofrece cuando el estudiante responde bien las 5 preguntas base (100%): ahí se le presenta automáticamente la 6.ª pregunta (adicional). Si también la acierta, alcanza AD; si no, se queda en A.</p>
+      <p class="hint" style="margin-top:6px;">El nivel AD solo se ofrece cuando el estudiante responde bien todas las preguntas base (100%): ahí se le presenta automáticamente la pregunta adicional. Si también la acierta, alcanza AD; si no, se queda en A. En Matemática las preguntas base son 3 (cada acierto vale 33%); revisa los umbrales si quieres que 2 de 3 aciertos den B.</p>
 
       <div style="margin-top:16px;">
         <button class="btn gold" id="btnGenerar">⚡ Buscar estándar y generar preguntas</button>
@@ -508,7 +509,7 @@
       </div>
 
       <div style="margin:10px 0;padding:12px;border:1px dashed var(--line);border-radius:10px;">
-        <label style="margin-top:0;">📄 Importar preguntas desde PDF — cada fila tiene su propio selector (exactamente 6 preguntas: 5 base + 1 adicional al final; numeradas, 4 opciones a) b) c) d), e idealmente una línea "Rpta: b")</label>
+        <label style="margin-top:0;">📄 Importar preguntas desde PDF — cada fila tiene su propio selector (exactamente 6 preguntas: 5 base + 1 adicional al final; en Matemática, 4: 3 base + 1 adicional; numeradas, 4 opciones a) b) c) d), e idealmente una línea "Rpta: b")</label>
 
         <div style="margin-top:10px;padding:10px;border:1px solid var(--line);border-radius:8px;">
           <b>PDF de la Fila A</b><br>
@@ -1096,10 +1097,10 @@ function actualizarSelectorFila(){
     const b = document.getElementById('btnEditarFila'+f);
     if(!b) return;
     b.className = 'fila-btn' + (filaEditando===f ? ' on-'+f : '');
-    b.textContent = `Fila ${f} (${bancos[f].length}/6)`;
+    b.textContent = `Fila ${f} (${bancos[f].length}/${cfgEditor().total})`;
   });
   const tx = document.getElementById('filaEditandoTxt');
-  if(tx) tx.textContent = `Estás editando el examen de la Fila ${filaEditando}. Escribe o importa sus 6 preguntas; luego cambia a la otra fila.`;
+  if(tx) tx.textContent = `Estás editando el examen de la Fila ${filaEditando}. Escribe o importa sus ${cfgEditor().total} preguntas; luego cambia a la otra fila.`;
 }
 ['A','B'].forEach(f=>document.getElementById('btnEditarFila'+f).addEventListener('click', ()=>{
   filaEditando = f; bancoActual = bancos[f]; renderBanco();
@@ -1199,13 +1200,14 @@ function renderBanco(){
     box.innerHTML = `<p class="hint">Todavía no hay preguntas de la Fila ${filaEditando} para este tema. Usa "+ Agregar pregunta" o importa un PDF.</p>`;
     return;
   }
+  const CFG = cfgEditor();
   box.innerHTML = bancoActual.map((q,i)=>`
-    <div class="card" style="padding:12px;margin-bottom:8px;${i===5?'border-left:4px solid var(--gold, #c98a2e);':''}">
+    <div class="card" style="padding:12px;margin-bottom:8px;${i===CFG.base?'border-left:4px solid var(--gold, #c98a2e);':''}">
       <div style="display:flex;justify-content:space-between;align-items:center;">
-        <b>${i===5 ? '⭐ Fila '+filaEditando+' · Pregunta adicional (bono AD)' : 'Fila '+filaEditando+' · Pregunta '+(i+1)+' de 5 (base)'}</b>
+        <b>${i===CFG.base ? '⭐ Fila '+filaEditando+' · Pregunta adicional (bono AD)' : 'Fila '+filaEditando+' · Pregunta '+(i+1)+' de '+CFG.base+' (base)'}</b>
         <button type="button" class="btn outline" data-del="${i}" style="padding:4px 10px;font-size:12px;">✕ Quitar</button>
       </div>
-      ${i===5 ? '<p class="hint" style="margin:4px 0 0;">Solo se le mostrará al estudiante si acierta las 5 preguntas base.</p>' : ''}
+      ${i===CFG.base ? '<p class="hint" style="margin:4px 0 0;">Solo se le mostrará al estudiante si acierta las '+CFG.base+' preguntas base.</p>' : ''}
       <input type="text" data-field="pregunta" data-idx="${i}" value="${escapeAttr(q.pregunta)}" placeholder="Texto de la pregunta" style="margin-top:6px;">
       ${[0,1,2,3].map(oi=>`
         <div style="display:flex;align-items:center;gap:6px;margin-top:4px;">
@@ -1232,9 +1234,9 @@ function renderBanco(){
 
   const btnAgregar = document.getElementById('btnAgregarPregunta');
   if(btnAgregar){
-    btnAgregar.disabled = bancoActual.length >= 6;
-    btnAgregar.style.opacity = bancoActual.length >= 6 ? '0.5' : '1';
-    btnAgregar.textContent = bancoActual.length >= 6 ? '✔ Ya tienes las 6 preguntas (5 base + 1 adicional)' : '+ Agregar pregunta';
+    btnAgregar.disabled = bancoActual.length >= CFG.total;
+    btnAgregar.style.opacity = bancoActual.length >= CFG.total ? '0.5' : '1';
+    btnAgregar.textContent = bancoActual.length >= CFG.total ? `✔ Ya tienes las ${CFG.total} preguntas (${CFG.base} base + 1 adicional)` : '+ Agregar pregunta';
   }
 }
 
@@ -1301,7 +1303,7 @@ function parsePreguntasFormatoPregunta(texto){
       out.push({ pregunta: pregunta.trim(), opciones: ops.map(o=>o.trim()), correcta: idx>=0?idx:0, rptaDetectada: !!letra });
     }
   });
-  return out.slice(0,6);
+  return out.slice(0, cfgEditor().total);
 }
 
 function parsePDFTextoAPreguntas(texto){
@@ -1369,7 +1371,7 @@ function parsePDFTextoAPreguntas(texto){
     }
   });
 
-  return preguntas.slice(0,6);
+  return preguntas.slice(0, cfgEditor().total);
 }
 
 function limpiarEstadosPDF(){
@@ -1419,8 +1421,8 @@ async function importarPDFaFila(file, fila){
     }
 
     const sinRpta = preguntasDetectadas.filter(q=>!q.rptaDetectada).length;
-    const faltan = preguntasDetectadas.length < 6
-      ? `<br><span style="color:var(--danger,#b3261e);">⚠ Se esperaban 6 preguntas y solo se reconocieron ${preguntasDetectadas.length}. Completa las que falten a mano con "+ Agregar pregunta".</span>` : '';
+    const faltan = preguntasDetectadas.length < cfgEditor().total
+      ? `<br><span style="color:var(--danger,#b3261e);">⚠ Se esperaban ${cfgEditor().total} preguntas y solo se reconocieron ${preguntasDetectadas.length}. Completa las que falten a mano con "+ Agregar pregunta".</span>` : '';
 
     // Guarda SOLO en la fila indicada; la otra fila no se toca.
     bancos[fila] = preguntasDetectadas;
@@ -1585,8 +1587,9 @@ function validarBanco(){
   const errBox = document.getElementById('bancoError');
   for(const f of ['A','B']){
     const b = bancos[f];
-    if(b.length !== 6){
-      errBox.innerHTML = `<div class="error-box">La Fila ${f} necesita exactamente 6 preguntas: 5 base + 1 adicional (bono AD) al final. Tiene ${b.length}.</div>`;
+    const CFG = cfgEditor();
+    if(b.length !== CFG.total){
+      errBox.innerHTML = `<div class="error-box">La Fila ${f} necesita exactamente ${CFG.total} preguntas: ${CFG.base} base + 1 adicional (bono AD) al final. Tiene ${b.length}.</div>`;
       return false;
     }
     if(b.some(q=>!q.pregunta.trim() || q.opciones.some(o=>!o.trim()))){
@@ -1658,8 +1661,8 @@ document.getElementById('btnComenzarEvaluacion').addEventListener('click', ()=>{
       B: Number(document.getElementById('thB').value),
       A: Number(document.getElementById('thA').value)
     },
-    preguntas: bancos.A.slice(0, 6),
-    preguntasB: bancos.B.slice(0, 6),
+    preguntas: bancos.A.slice(0, cfgArea(area).total),
+    preguntasB: bancos.B.slice(0, cfgArea(area).total),
     key: temaKey(area, competencia, tema),
     micropractica: document.getElementById('micropractica').value.trim(),
     evaluados: []
@@ -1674,9 +1677,10 @@ document.getElementById('btnComenzarEvaluacion').addEventListener('click', ()=>{
 function renderQuestionsPreview(){
   const box = document.getElementById('questionsPreview');
   const s = state.currentSession;
+  const BASE = cfgArea(s.area).base;
   const bloque = (preg)=> preg.map((q,i)=>`
-    <div style="margin-bottom:14px;${i===5?'padding-left:8px;border-left:3px solid var(--gold, #c98a2e);':''}">
-      <b>${i===5 ? '⭐ Adicional (bono AD):' : (i+1)+'.'}</b> ${q.pregunta}
+    <div style="margin-bottom:14px;${i===BASE?'padding-left:8px;border-left:3px solid var(--gold, #c98a2e);':''}">
+      <b>${i===BASE ? '⭐ Adicional (bono AD):' : (i+1)+'.'}</b> ${q.pregunta}
       <div style="margin-left:16px;margin-top:4px;">
         ${q.opciones.map((op,oi)=>`
           <div style="${oi===q.correcta ? 'color:var(--green,#2e7d32);font-weight:600;' : 'color:var(--ink-soft);'}">
@@ -1903,6 +1907,11 @@ let quizQIndex = 0;
 let quizCurrentCorrect = 0;
 let quizBonusCorrect = null; // null = no aplica todavía, true/false tras responder el bono
 
+// Matemática: 3 preguntas base + 1 adicional (AD). Demás áreas: 5 base + 1 adicional.
+function esMatematica(area){ return /matem/i.test(area || ''); }
+function cfgArea(area){ return esMatematica(area) ? {base:3, total:4} : {base:5, total:6}; }
+function cfgEditor(){ return cfgArea(document.getElementById('area').value); }
+
 function preguntasActuales(){
   const s = state.currentSession;
   return preguntasDeFila(s, filaDe(s, s.seleccionados[quizQueueIndex]));
@@ -1947,7 +1956,8 @@ function startNextStudent(){
   // Si el estudiante había sido aplazado, continúa donde se quedó
   const par = s.parciales && s.parciales[s.seleccionados[quizQueueIndex]];
   if(par){ quizQIndex = par.qIndex; quizCurrentCorrect = par.correct; }
-  if(quizQIndex >= 5 && quizCurrentCorrect === 5 && preguntasActuales().length >= 6){
+  const CB = cfgArea(s.area);
+  if(quizQIndex >= CB.base && quizCurrentCorrect === CB.base && preguntasActuales().length > CB.base){
     renderBonusQuestion();
   } else {
     renderQuizQuestion();
@@ -2001,20 +2011,18 @@ function renderQuizQuestion(){
     <div class="card" style="padding:0; overflow:hidden;">
       <div class="quiz-student">
         <span>N.° ${String(student.num).padStart(2,'0')} · ${student.name} · Fila ${filaDe(s,studentId)}</span>
-        <span class="qn">Pregunta ${quizQIndex+1} / 5</span>
+        <span class="qn">Pregunta ${quizQIndex+1} / ${cfgArea(s.area).base}</span>
       </div>
       <div class="quiz-body">
         <div class="quiz-q">${q.pregunta}</div>
-        <p class="hint" style="margin:-8px 0 10px;">Lee la pregunta en voz alta al estudiante y marca la opción que él o ella respondió.</p>
+        <p class="hint" style="margin:-8px 0 10px;">Lee la pregunta en voz alta al estudiante, marca la opción que respondió y pulsa «Confirmar respuesta». Puedes cambiarla antes de confirmar.</p>
         <div class="quiz-opts" id="quizOpts">
           ${q.opciones.map((op,i)=>`<button class="quiz-opt" data-i="${i}"><span class="quiz-opt-letter">${String.fromCharCode(97+i)}</span><span class="quiz-opt-text">${op}</span></button>`).join('')}
         </div>
       </div>
     </div>
   `;
-  document.querySelectorAll('.quiz-opt').forEach(btn=>{
-    btn.addEventListener('click', ()=>answerQuiz(Number(btn.dataset.i)));
-  });
+  armarSeleccion(answerQuiz);
   insertAplazarBtn();
 }
 
@@ -2022,7 +2030,7 @@ function renderBonusQuestion(){
   const s = state.currentSession;
   const studentId = s.seleccionados[quizQueueIndex];
   const student = ROSTER.find(r=>r.id===studentId);
-  const q = preguntasActuales()[5];
+  const q = preguntasActuales()[cfgArea(s.area).base];
   const area = document.getElementById('quizArea');
   area.innerHTML = `
     <div class="card" style="padding:0; overflow:hidden; border:2px solid var(--gold, #c98a2e);">
@@ -2031,7 +2039,7 @@ function renderBonusQuestion(){
         <span class="qn">⭐ Pregunta adicional (bono AD)</span>
       </div>
       <div class="quiz-body">
-        <p class="hint" style="margin-top:0;">¡Acertó las 5 preguntas base (100%)! Esta pregunta extra define si alcanza el nivel AD.</p>
+        <p class="hint" style="margin-top:0;">¡Acertó las ${cfgArea(s.area).base} preguntas base (100%)! Esta pregunta extra define si alcanza el nivel AD.</p>
         <div class="quiz-q">${q.pregunta}</div>
         <div class="quiz-opts" id="quizOpts">
           ${q.opciones.map((op,i)=>`<button class="quiz-opt" data-i="${i}"><span class="quiz-opt-letter">${String.fromCharCode(97+i)}</span><span class="quiz-opt-text">${op}</span></button>`).join('')}
@@ -2039,10 +2047,37 @@ function renderBonusQuestion(){
       </div>
     </div>
   `;
-  document.querySelectorAll('.quiz-opt').forEach(btn=>{
-    btn.addEventListener('click', ()=>answerBonus(Number(btn.dataset.i)));
-  });
+  armarSeleccion(answerBonus);
   insertAplazarBtn();
+}
+
+// Marcar una opción NO la registra: se puede cambiar hasta pulsar «Confirmar respuesta».
+function armarSeleccion(onConfirm){
+  let elegida = null;
+  const botones = Array.from(document.querySelectorAll('.quiz-opt'));
+  const body = document.querySelector('#quizArea .quiz-body');
+  const wrap = document.createElement('div');
+  wrap.style.cssText = 'margin-top:14px;';
+  wrap.innerHTML = '<button type="button" class="btn gold" id="btnConfirmar" disabled style="width:100%;">✔ Confirmar respuesta</button>' +
+    '<p class="hint" id="txtSeleccion" style="margin:6px 0 0;text-align:center;">Elige una opción.</p>';
+  body.appendChild(wrap);
+  const btnC = document.getElementById('btnConfirmar');
+  const txt = document.getElementById('txtSeleccion');
+  botones.forEach((btn,i)=>{
+    btn.addEventListener('click', ()=>{
+      elegida = i;
+      botones.forEach(b=>b.classList.remove('selected'));
+      btn.classList.add('selected');
+      btnC.disabled = false;
+      txt.textContent = 'Marcaste la opción ' + String.fromCharCode(97+i) + '. Puedes cambiarla o confirmarla.';
+    });
+  });
+  btnC.addEventListener('click', ()=>{
+    if(elegida === null) return;
+    btnC.disabled = true;
+    botones.forEach(b=>b.classList.remove('selected'));
+    onConfirm(elegida);
+  });
 }
 
 function answerQuiz(chosenIndex){
@@ -2051,6 +2086,7 @@ function answerQuiz(chosenIndex){
   const buttons = document.querySelectorAll('.quiz-opt');
   buttons.forEach(b=>b.disabled = true);
   const ap1 = document.getElementById('btnAplazar'); if(ap1) ap1.disabled = true;
+  const cf1 = document.getElementById('btnConfirmar'); if(cf1) cf1.disabled = true;
   buttons[q.correcta].classList.add('correct');
   if(chosenIndex !== q.correcta){
     buttons[chosenIndex].classList.add('incorrect');
@@ -2059,9 +2095,10 @@ function answerQuiz(chosenIndex){
   }
   setTimeout(()=>{
     quizQIndex++;
-    if(quizQIndex < 5){
+    const CB2 = cfgArea(s.area);
+    if(quizQIndex < CB2.base){
       renderQuizQuestion();
-    } else if(quizCurrentCorrect === 5 && preguntasActuales().length >= 6){
+    } else if(quizCurrentCorrect === CB2.base && preguntasActuales().length > CB2.base){
       renderBonusQuestion();
     } else {
       finishStudent();
@@ -2071,10 +2108,11 @@ function answerQuiz(chosenIndex){
 
 function answerBonus(chosenIndex){
   const s = state.currentSession;
-  const q = preguntasActuales()[5];
+  const q = preguntasActuales()[cfgArea(s.area).base];
   const buttons = document.querySelectorAll('.quiz-opt');
   buttons.forEach(b=>b.disabled = true);
   const ap2 = document.getElementById('btnAplazar'); if(ap2) ap2.disabled = true;
+  const cf2 = document.getElementById('btnConfirmar'); if(cf2) cf2.disabled = true;
   buttons[q.correcta].classList.add('correct');
   if(chosenIndex !== q.correcta){
     buttons[chosenIndex].classList.add('incorrect');
@@ -2096,7 +2134,8 @@ function finishStudent(){
   const studentId = s.seleccionados[quizQueueIndex];
   const student = ROSTER.find(r=>r.id===studentId);
   if(s.parciales) delete s.parciales[studentId];
-  const pct = Math.round((quizCurrentCorrect / 5) * 100);
+  const NB = cfgArea(s.area).base;
+  const pct = Math.round((quizCurrentCorrect / NB) * 100);
   let nivel;
   if(pct === 100){
     nivel = quizBonusCorrect ? 'AD' : 'A';
@@ -2108,9 +2147,9 @@ function finishStudent(){
   if(pct === 100){
     bonoTexto = quizBonusCorrect
       ? ' Además, acertó la pregunta adicional y alcanza el nivel de logro destacado (AD).'
-      : ' Respondió correctamente las 5 preguntas base (100%), pero no acertó la pregunta adicional, por lo que se mantiene en el nivel A.';
+      : ' Respondió correctamente las ${NB} preguntas base (100%), pero no acertó la pregunta adicional, por lo que se mantiene en el nivel A.';
   }
-  const conclusion = `${student.name} obtuvo el nivel ${nivel} (${quizCurrentCorrect}/5 preguntas base correctas, ${pct}%) en la competencia "${s.competencia}".${bonoTexto} ${descriptor}`.trim();
+  const conclusion = `${student.name} obtuvo el nivel ${nivel} (${quizCurrentCorrect}/${NB} preguntas base correctas, ${pct}%) en la competencia "${s.competencia}".${bonoTexto} ${descriptor}`.trim();
 
   s.evaluados.push({
     studentId, nombre: student.name, fila: filaDe(s, studentId), correctas: quizCurrentCorrect, total: 5,
@@ -2128,7 +2167,7 @@ function finishStudent(){
       <div style="display:flex; align-items:center; gap:10px;">
         <span class="badge ${nivel}">${nivel}</span>
         <b>${student.name}</b> <span class="badge" style="background:#e8ebf3;color:var(--navy);">Fila ${filaDe(s,studentId)}</span>
-        <span style="color:var(--ink-soft); font-size:13px;">${quizCurrentCorrect}/5 correctas (${pct}%)${pct===100 ? (quizBonusCorrect ? ' + bono ✔' : ' + bono ✕') : ''}</span>
+        <span style="color:var(--ink-soft); font-size:13px;">${quizCurrentCorrect}/${NB} correctas (${pct}%)${pct===100 ? (quizBonusCorrect ? ' + bono ✔' : ' + bono ✕') : ''}</span>
       </div>
       <div class="conclusion-text">${conclusion}</div>
     </div>
@@ -2215,10 +2254,10 @@ function generarPDF(s){
     doc.setFontSize(10); doc.setTextColor(0);
   }
 
-  doc.setFont('helvetica','bold'); doc.text('Criterio de calificación (sobre 5 preguntas base):', margin, y); y+=5;
+  doc.setFont('helvetica','bold'); doc.text(`Criterio de calificación (sobre ${cfgArea(s.area).base} preguntas base):`, margin, y); y+=5;
   doc.setFont('helvetica','normal'); doc.setFontSize(9);
   const criterioLines = doc.splitTextToSize(
-    `C: menor a ${s.thresholds.B}%  |  B: ${s.thresholds.B}%–${s.thresholds.A-1}%  |  A: ${s.thresholds.A}%–100%  |  AD: 100% + acierta la 6.ª pregunta adicional (bono)`, 180);
+    `C: menor a ${s.thresholds.B}%  |  B: ${s.thresholds.B}%–${s.thresholds.A-1}%  |  A: ${s.thresholds.A}%–100%  |  AD: 100% + acierta la ${cfgArea(s.area).total}.ª pregunta adicional (bono)`, 180);
   doc.text(criterioLines, margin, y); y += criterioLines.length*4.5 + 4;
 
   if(s.micropractica){
@@ -2430,7 +2469,7 @@ function volverATomarSesion(sesionId){
   renderFotoPreview();
   renderBanco();
   document.getElementById('bancoCard').style.display = 'block';
-  document.getElementById('bancoGuardadoOk').style.display = (bancos.A.length===6 && bancos.B.length===6) ? 'block' : 'none';
+  document.getElementById('bancoGuardadoOk').style.display = (bancos.A.length===cfgEditor().total && bancos.B.length===cfgEditor().total) ? 'block' : 'none';
 
   switchTab('sesion');
   setStatus(`Preguntas de "${s.area} — ${s.tema}" cargadas de nuevo. Revísalas y presiona "▶️ Comenzar evaluación" para tomarla otra vez. Si el registro anterior fue un error, elimínalo desde la pestaña "Registro".`, false);
@@ -2490,7 +2529,7 @@ document.getElementById('btnRestaurarBackup').addEventListener('click', async ()
 /* ============================================================
    PWA — instalación en el celular y uso sin internet
 ============================================================ */
-const BUILD_ID = '20261019b';
+const BUILD_ID = '20261103';
 (async function limpiarCacheYRegistrar(){
   // Una sola vez por versión: borra cachés del navegador y service workers anteriores.
   // NO toca los datos guardados (exámenes, registro, sesiones): esos están en localStorage.
@@ -2509,10 +2548,10 @@ const BUILD_ID = '20261019b';
   }catch(e){}
   if('serviceWorker' in navigator){
     window.addEventListener('load', ()=>{
-      navigator.serviceWorker.register('sw-v20261019b.js').catch(()=>{});
+      navigator.serviceWorker.register('sw-v20261103.js').catch(()=>{});
     });
     if(document.readyState === 'complete'){
-      navigator.serviceWorker.register('sw-v20261019b.js').catch(()=>{});
+      navigator.serviceWorker.register('sw-v20261103.js').catch(()=>{});
     }
   }
 })();
