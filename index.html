@@ -10,6 +10,7 @@
 <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
 <link rel="icon" type="image/png" sizes="16x16" href="icons/favicon-16.png">
 <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+<link rel="icon" type="image/png" sizes="512x512" href="icons/icon-512.png">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -442,6 +443,7 @@
             <option>Educación Religiosa</option>
             <option>Inglés</option>
             <option>Tutoría / Convivencia</option>
+            <option>Competencias transversales</option>
           </select>
         </div>
         <div>
@@ -870,6 +872,10 @@ const COMPETENCIAS_POR_AREA = {
   "Tutoría / Convivencia": [
     "Construye su identidad",
     "Convive y participa democráticamente en la búsqueda del bien común"
+  ],
+  "Competencias transversales": [
+    "Se desenvuelve en entornos virtuales generados por las TIC",
+    "Gestiona su aprendizaje de manera autónoma"
   ]
 };
 
@@ -1047,6 +1053,18 @@ const MINEDU_ESTANDARES = {
   fuente:"Programa Curricular de Educación Primaria, MINEDU 2016 - Educación Religiosa, ciclo V (texto referencial: verificar con el documento oficial)",
   capacidades:["Cultiva y expresa su fe de modo comprensible y respetuoso, participando en su comunidad de fe"],
   rubrica:{C:"Participa de actividades religiosas sin comprender su significado.",B:"Reconoce el sentido de algunas prácticas de su comunidad de fe, con apoyo del docente.",A:"Participa activamente en su comunidad de fe y expresa el sentido de su experiencia religiosa con sus propias palabras.",AD:"Da razón fundamentada de su fe, respeta otras creencias, y vive coherentemente su experiencia religiosa."}
+},
+"Se desenvuelve en entornos virtuales generados por las TIC": {
+  estandar:"Personaliza entornos virtuales según sus necesidades, gestiona información de distintos entornos virtuales seleccionándola y organizándola con criterios, interactúa con otras personas de manera responsable y crea objetos virtuales en diversos formatos para comunicar ideas.",
+  fuente:"CNEB - Competencia transversal, MINEDU 2016, ciclo V (texto referencial: verificar con el documento oficial)",
+  capacidades:["Personaliza entornos virtuales","Gestiona información del entorno virtual","Interactúa en entornos virtuales","Crea objetos virtuales en diversos formatos"],
+  rubrica:{C:"Usa herramientas digitales básicas solo con apoyo directo del docente y le cuesta ubicar información en el entorno virtual.",B:"Usa herramientas digitales sencillas y busca información con ayuda, con dificultad para organizarla o crear productos propios.",A:"Busca, selecciona y organiza información en entornos virtuales, interactúa con responsabilidad y crea objetos virtuales con autonomía.",AD:"Gestiona con criterio y autonomía diversos entornos virtuales, crea productos digitales originales y orienta a sus compañeros en su uso responsable."}
+},
+"Gestiona su aprendizaje de manera autónoma": {
+  estandar:"Se organiza para realizar una tarea, define metas de aprendizaje, planifica las acciones estratégicas para alcanzarlas, y monitorea y ajusta su desempeño reconociendo avances, dificultades y cambios necesarios durante el proceso.",
+  fuente:"CNEB - Competencia transversal, MINEDU 2016, ciclo V (texto referencial: verificar con el documento oficial)",
+  capacidades:["Define metas de aprendizaje","Organiza acciones estratégicas para alcanzar sus metas de aprendizaje","Monitorea y ajusta su desempeño durante el proceso de aprendizaje"],
+  rubrica:{C:"Realiza las tareas que se le indican, sin establecer metas ni revisar cómo avanza.",B:"Propone metas sencillas y sigue los pasos indicados, con dificultad para reconocer sus errores y ajustar su trabajo.",A:"Define metas, organiza sus acciones y revisa su avance, ajustando su trabajo con autonomía cuando lo necesita.",AD:"Se traza metas retadoras, planifica estrategias propias, evalúa su desempeño con criterio y propone mejoras fundamentadas."}
 }
 };
 
@@ -1074,7 +1092,8 @@ const MICRO_SUGERENCIAS = {
   'Educación Física': 'Recordar en 1 minuto, antes de iniciar, la secuencia o regla principal de "{tema}" trabajada la clase anterior.',
   'Educación Religiosa': 'Pregunta de recuperación activa: ¿qué recuerdas sobre "{tema}"? Compartir en 2-3 frases antes de iniciar la clase.',
   'Inglés': '3 palabras o frases cortas de "{tema}" repasadas en voz alta cada día, antes de aprender otras nuevas.',
-  'Tutoría / Convivencia': 'Reflexión breve diaria (5 min) retomando "{tema}": una situación en la que se aplicó o se pudo aplicar.'
+  'Tutoría / Convivencia': 'Reflexión breve diaria (5 min) retomando "{tema}": una situación en la que se aplicó o se pudo aplicar.',
+  'Competencias transversales': 'Autoevaluación de 3 min: ¿qué meta me puse hoy con "{tema}", qué estrategia usé y qué ajustaré mañana? Anotarlo en 2-3 líneas en la libreta.'
 };
 
 document.getElementById('btnSugerirMicro').addEventListener('click', ()=>{
@@ -2529,7 +2548,7 @@ document.getElementById('btnRestaurarBackup').addEventListener('click', async ()
 /* ============================================================
    PWA — instalación en el celular y uso sin internet
 ============================================================ */
-const BUILD_ID = '20261103';
+const BUILD_ID = '20261118';
 (async function limpiarCacheYRegistrar(){
   // Una sola vez por versión: borra cachés del navegador y service workers anteriores.
   // NO toca los datos guardados (exámenes, registro, sesiones): esos están en localStorage.
@@ -2548,10 +2567,10 @@ const BUILD_ID = '20261103';
   }catch(e){}
   if('serviceWorker' in navigator){
     window.addEventListener('load', ()=>{
-      navigator.serviceWorker.register('sw-v20261103.js').catch(()=>{});
+      navigator.serviceWorker.register('sw-v20261118.js').catch(()=>{});
     });
     if(document.readyState === 'complete'){
-      navigator.serviceWorker.register('sw-v20261103.js').catch(()=>{});
+      navigator.serviceWorker.register('sw-v20261118.js').catch(()=>{});
     }
   }
 })();
